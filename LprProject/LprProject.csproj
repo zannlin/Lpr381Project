@@ -8,4 +8,48 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="obj\Debug\net8.0-windows\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs" />
+    <Compile Include="obj\Debug\net8.0-windows\LPR Form.AssemblyInfo.cs" />
+    <Compile Include="obj\Debug\net8.0-windows\LPR Form.GlobalUsings.g.cs" />
+    <Compile Include="obj\Debug\net8.0-windows\LprProject.AssemblyInfo.cs" />
+    <Compile Include="obj\Debug\net8.0-windows\LprProject.GlobalUsings.g.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="obj\Debug\net8.0-windows\LPR Form.csproj.FileListAbsolute.txt" />
+    <Content Include="obj\Debug\net8.0-windows\LPR Form.designer.deps.json" />
+    <Content Include="obj\Debug\net8.0-windows\LPR Form.designer.runtimeconfig.json" />
+    <Content Include="obj\Debug\net8.0-windows\LPR Form.sourcelink.json" />
+    <Content Include="obj\LPR Form.csproj.nuget.dgspec.json" />
+    <Content Include="obj\LprProject.csproj.nuget.dgspec.json" />
+    <Content Include="obj\project.assets.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="LPR Form.csproj" />
+    <None Include="LPR Form.csproj.user" />
+    <None Include="obj\Debug\net8.0-windows\apphost.exe" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.assets.cache" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.csproj.BuildWithSkipAnalyzers" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.csproj.CoreCompileInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.csproj.GenerateResource.cache" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.dll" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.genruntimeconfig.cache" />
+    <None Include="obj\Debug\net8.0-windows\LPR Form.pdb" />
+    <None Include="obj\Debug\net8.0-windows\LprProject.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\LprProject.assets.cache" />
+    <None Include="obj\Debug\net8.0-windows\LprProject.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0-windows\LPR_Form.Form1.resources" />
+    <None Include="obj\Debug\net8.0-windows\refint\LPR Form.dll" />
+    <None Include="obj\Debug\net8.0-windows\ref\LPR Form.dll" />
+    <None Include="obj\LPR Form.csproj.nuget.g.props" />
+    <None Include="obj\LPR Form.csproj.nuget.g.targets" />
+    <None Include="obj\LprProject.csproj.nuget.g.props" />
+    <None Include="obj\LprProject.csproj.nuget.g.targets" />
+    <None Include="obj\project.nuget.cache" />
+  </ItemGroup>
+
 </Project>
