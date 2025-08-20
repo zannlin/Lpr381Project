@@ -1,4 +1,6 @@
-namespace LPR_Form
+using LPR_Form;
+
+namespace LprProject
 {
     internal static class Program
     {
