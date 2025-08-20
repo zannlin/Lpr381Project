@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPR_Form.Models
+namespace LPModelsLibrary.Models
 {
-    internal class SimplexResult
+    public class SimplexResult
     {
         public double OptimalValue { get; set; }
         public double[] PrimalVariables { get; set; } = Array.Empty<double>();

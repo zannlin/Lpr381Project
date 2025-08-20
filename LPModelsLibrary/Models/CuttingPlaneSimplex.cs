@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPR_Form.Models
+namespace LPModelsLibrary.Models
 {
-    internal class CuttingPlaneSimplex
+    public class CuttingPlaneSimplex
     {
         public SimplexResult cuttingPlaneResult;
         public TableauTemplate optimalTableau;

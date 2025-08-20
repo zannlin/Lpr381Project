@@ -1,4 +1,4 @@
-﻿namespace LPR_Form.Models
+﻿namespace LPModelsLibrary.Models
 {
     public class TableauTemplate
     {

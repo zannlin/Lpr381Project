@@ -7,10 +7,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using LPR_Form.Models;
-namespace Lpr381Project
+using LPModelsLibrary.Models;
+namespace LPModelsLibrary.Models
 {
-    internal class PrimalSimplex
+    public class PrimalSimplex
     {
         
             public static SimplexResult Solve(double[,] A, double[] b, double[] c, double eps = 1e-9)
@@ -39,7 +39,7 @@ namespace Lpr381Project
                     // Original coefficients
                     for (int j = 0; j < n; j++) T[i, j] = A[i, j]; // just copying the objective function coefficients and constraint coefficients to the tableau
                     // Slack variable
-                    for (int j = 0; j < m; j++) T[i, n + j] = (i == j) ? 1.0 : 0.0; // adds the slack variables to the tableau, where each slack variable corresponds to a constraint
+                    for (int j = 0; j < m; j++) T[i, n + j] = i == j ? 1.0 : 0.0; // adds the slack variables to the tableau, where each slack variable corresponds to a constraint
                     // RHS
                     T[i, cols - 1] = b[i];
                 }
@@ -110,7 +110,7 @@ namespace Lpr381Project
                         if (aij > eps)
                         {
                             double ratio = T[i, cols - 1] / aij;
-                            if (ratio < bestRatio - 1e-15 || (Math.Abs(ratio - bestRatio) <= 1e-15 && i < pivotRow))
+                            if (ratio < bestRatio - 1e-15 || Math.Abs(ratio - bestRatio) <= 1e-15 && i < pivotRow)
                             {
                                 bestRatio = ratio;
                                 pivotRow = i;

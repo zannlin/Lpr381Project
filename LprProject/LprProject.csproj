@@ -13,4 +13,8 @@
     <None Include="LPR Form.csproj.user" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LPModelsLibrary\LPModelsLibrary.csproj" />
+  </ItemGroup>
+
 </Project>
