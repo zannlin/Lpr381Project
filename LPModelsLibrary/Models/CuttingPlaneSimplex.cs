@@ -1,9 +1,4 @@
-﻿using Lpr381Project; // for SimplexResult, TableauTemplate
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace LPModelsLibrary.Models
+﻿namespace LPModelsLibrary.Models
 {
     public class CuttingPlaneSimplex
     {
@@ -16,7 +11,7 @@ namespace LPModelsLibrary.Models
             optimalTableau = cuttingPlaneResult.Tableaus.LastOrDefault()
                               ?? throw new InvalidOperationException("No tableau available in the result.");
         }
-        private void DualSimplex(TableauTemplate tab, double eps = 1e-9)
+        public void DualSimplex(TableauTemplate tab, double eps = 1e-9)
         {
 
             int m = tab.Tableau.GetLength(0);

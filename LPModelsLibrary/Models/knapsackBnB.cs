@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using LPModelsLibrary.Models;
 using System.Text;
-using Lpr381Project; // For PrimalSimplex
-using LPR_Form.Models; // For SimplexResult, TableauTemplate
 
 namespace LprProject.Models
 {
