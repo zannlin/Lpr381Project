@@ -1,6 +1,7 @@
-using Lpr381Project;
-using static Lpr381Project.PrimalSimplex;
 using LPR_Form.Models;
+using Lpr381Project;
+using LprProject.Models;
+using static Lpr381Project.PrimalSimplex;
 
 namespace LPR_Form
 {
@@ -107,6 +108,46 @@ namespace LPR_Form
             }
 
             richTextBox1.Text = output;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            if (constraint == null || rhs == null || objectiveFunction == null)
+            {
+                MessageBox.Show("Please upload a valid input file first.");
+                return;
+            }
+
+            double[] weights = new double[constraint.GetLength(1)];
+            for (int j = 0; j < weights.Length; j++)
+            {
+                weights[j] = constraint[0, j];
+            }
+            double capacity = rhs[0];
+            double[] values = objectiveFunction.TakeWhile((v, i) => i < objectiveFunction.Length - 1 || v != 0).ToArray();
+
+            if (values.Length != weights.Length)
+            {
+                MessageBox.Show($"Length mismatch after trim: values={values.Length}, weights={weights.Length}");
+                return;
+            }
+
+            try
+            {
+                var knapsack = new knapsackBnB(values, weights, capacity);
+                knapsack.Solve();
+                richTextBox1.Text = knapsack.DisplayResults();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error solving knapsack: " + ex.Message);
+            }
+
         }
     }
 }

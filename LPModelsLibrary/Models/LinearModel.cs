@@ -54,7 +54,8 @@
             
             Console.WriteLine($"Objective Function Count {DummyObjectiveFunction.Count}:");
             ObjectiveFuntion = new double[DummyObjectiveFunction.Count];
-            DummyObjectiveFunction.RemoveAt(0); 
+            DummyObjectiveFunction.RemoveAt(0);
+
 
             for (int i = 0; i < DummyObjectiveFunction.Count; i++)
             {

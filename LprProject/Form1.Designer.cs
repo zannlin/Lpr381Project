@@ -68,6 +68,7 @@
             button3.TabIndex = 2;
             button3.Text = "button3";
             button3.UseVisualStyleBackColor = true;
+            button3.Click += button3_Click;
             // 
             // button4
             // 
@@ -84,14 +85,15 @@
             button5.Name = "button5";
             button5.Size = new Size(182, 38);
             button5.TabIndex = 4;
-            button5.Text = "button5";
+            button5.Text = "Branch and Bound Knapsack";
             button5.UseVisualStyleBackColor = true;
+            button5.Click += button5_Click;
             // 
             // richTextBox1
             // 
-            richTextBox1.Location = new Point(550, 189);
+            richTextBox1.Location = new Point(483, 189);
             richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(461, 363);
+            richTextBox1.Size = new Size(625, 363);
             richTextBox1.TabIndex = 5;
             richTextBox1.Text = "";
             richTextBox1.TextChanged += richTextBox1_TextChanged;
