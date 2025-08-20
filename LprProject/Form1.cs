@@ -95,7 +95,18 @@ namespace LPR_Form
         {
             var result = PrimalSimplex.Solve(constraint, rhs, objectiveFunction);
             CuttingPlaneSimplex cuttingPlane = new CuttingPlaneSimplex(result);
-            richTextBox1.Text = cuttingPlane.addNewConstraint();
+            cuttingPlane.SolveWithCuts();
+
+            var allTables = cuttingPlane.cuttingPlaneResult.Tableaus;
+
+            string output = String.Empty;
+
+            foreach (var snap in allTables)
+            {
+                output += snap.ToString();
+            }
+
+            richTextBox1.Text = output;
         }
     }
 }

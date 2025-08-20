@@ -2,13 +2,13 @@
 {
     public class TableauTemplate
     {
-        public double[,] Tableau { get; }
-        public string[] ColHeaders { get; }
-        public string[] RowHeaders { get; }
-        public int Iteration { get; }
-        public int? PivotRow { get; }
-        public int? PivotCol { get; }
-        public string Note { get; }
+        public double[,] Tableau { get; set; }
+        public string[] ColHeaders { get; set; }
+        public string[] RowHeaders { get; set; }
+        public int Iteration { get; set; }
+        public int? PivotRow { get; set; }
+        public int? PivotCol { get; set; }
+        public string Note { get; set; }
 
         public TableauTemplate(double[,] tableau, string[] colHeaders, string[] rowHeaders,
                                int iteration, int? pivotRow, int? pivotCol, string note = "")

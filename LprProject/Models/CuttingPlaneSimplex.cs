@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Lpr381Project; // for SimplexResult, TableauTemplate
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LPR_Form.Models
 {
@@ -11,84 +10,78 @@ namespace LPR_Form.Models
         public SimplexResult cuttingPlaneResult;
         public TableauTemplate optimalTableau;
 
-
-        public CuttingPlaneSimplex(SimplexResult result) 
+        public CuttingPlaneSimplex(SimplexResult result)
         {
-            cuttingPlaneResult = result;
-            if (cuttingPlaneResult == null)
-            {
-                throw new InvalidOperationException("No Simplex Result found in the result.");
-            }
-            else
-            {
-                optimalTableau = cuttingPlaneResult.Tableaus.LastOrDefault();
-            }
-
-
+            cuttingPlaneResult = result ?? throw new InvalidOperationException("No Simplex Result found in the result.");
+            optimalTableau = cuttingPlaneResult.Tableaus.LastOrDefault()
+                              ?? throw new InvalidOperationException("No tableau available in the result.");
         }
-
-        public string display()
+        private void DualSimplex(TableauTemplate tab, double eps = 1e-9)
         {
-            return cuttingPlaneResult.Tableaus[cuttingPlaneResult.Tableaus.Count-1].ToString() ?? "No tableau available.";
-        }
 
+            int m = tab.Tableau.GetLength(0);
+            int n = tab.Tableau.GetLength(1);
+            int zRow = m - 1;
+            int rhs = n - 1;
 
-        public string addNewConstraint()
-        {
-            // identify the rhs value with the closest fractional value to 0.5 excluding Z row
-            double closestFractionalValue = double.MaxValue;
-            int closestRowIndex = -1;
+            int guard = 0, guardMax = 1000;
 
-            for (int i = 0; i < optimalTableau.Tableau.GetLength(0) - 1; i++) // Exclude last row (Z row)
+            while (true)
             {
-                double rhsValue = optimalTableau.Tableau[i, optimalTableau.Tableau.GetLength(1) - 1];
-                rhsValue = rhsValue - Math.Truncate(rhsValue);// removing the integer part to focus on the fractional part
-                if (Math.Abs(rhsValue - 0.5) < Math.Abs(closestFractionalValue - 0.5))
-                {
-                    closestFractionalValue = rhsValue;
-                    closestRowIndex = i;
-                }
-            }
-            // once we have the closest row index, we can add a new constraint.
+                guard++;
+                if (guard > guardMax) break;
 
-            if (closestRowIndex != -1)
-            {
-                // Create a new constraint based on the closest row
-                double[] oldRow = new double[optimalTableau.Tableau.GetLength(1)];
-                for (int j = 0; j < optimalTableau.Tableau.GetLength(1); j++)
+                // 1) pick leaving row = most negative RHS among constraints
+                int pr = -1;
+                double mostNeg = -eps;
+                for (int i = 0; i < zRow; i++)
                 {
-                    oldRow[j] = optimalTableau.Tableau[closestRowIndex, j];
-                }
-
-                for (int j = 0; j < oldRow.Length; j++)
-                {
-                    double newValue = oldRow[j] - Math.Truncate(oldRow[j]);
-                      
-
-                    // -0.8833  -> -0.833
-                    if (oldRow[j] > 0)
+                    double b = tab.Tableau[i, rhs];
+                    if (b < mostNeg)
                     {
-                        oldRow[j] = newValue;
+                        mostNeg = b;
+                        pr = i;
                     }
-                    else
-                    {
-                        newValue = Math.Abs(newValue);
-                        oldRow[j] = 1 - newValue;
-                    }
-                    oldRow[j] *= -1; // Negate the values to create a new constraint
-
                 }
 
-                return $"New constraint added based on row {closestRowIndex + 1}: " +
-                       $"{string.Join(", ", oldRow.Select(x => x.ToString("0.###")))}" +
-                       $" with a fractional part closest to 0.5.";
+                // If none negative -> primal feasible -> done (since z-row is unchanged)
+                if (pr == -1) break;
 
-            }
-            else
+                // 2) entering column via dual ratio test: argmin_j { z_j / (-a_prj) | a_prj < 0 }
+                int pc = -1;
+                double bestRatio = double.PositiveInfinity;
+                for (int j = 0; j < rhs; j++) // exclude RHS
+                {
+                    double a = tab.Tableau[pr, j];
+                    if (a < -eps)
+                    {
+                        double zj = tab.Tableau[zRow, j];
+                        double ratio = zj / (-a);
+                        if (ratio < bestRatio - 1e-15)
+                        {
+                            bestRatio = ratio;
+                            pc = j;
+                        }
+                    }
+                }
 
-            {
-                return null;
+                if (pc == -1)
+                {
+                    // No eligible entering column -> dual simplex cannot proceed (infeasible)
+                    break;
+                }
+
+                // 3) pivot and update row header for the basic variable
+                Pivot(tab.Tableau, pr, pc, eps);
+
+                if (tab.RowHeaders != null && tab.ColHeaders != null &&
+                    pr >= 0 && pr < tab.RowHeaders.Length &&
+                    pc >= 0 && pc < tab.ColHeaders.Length)
+                {
+                    tab.RowHeaders[pr] = tab.ColHeaders[pc];
+                }
             }
+
 
         }
 
@@ -121,9 +114,21 @@ namespace LPR_Form.Models
                     if (Math.Abs(T[i, j]) < eps) T[i, j] = 0.0;
         }
 
-        private static bool integerCheck()
+        private List<List<double>> ToRowList(double[,] tableau)
         {
-            return false;
+            int m = tableau.GetLength(0);
+            int n = tableau.GetLength(1);
+            var rows = new List<List<double>>(m);
+            for (int i = 0; i < m; i++)
+            {
+                var row = new List<double>(n);
+                for (int j = 0; j < n; j++)
+                {
+                    row.Add(tableau[i, j]);
+                }
+                rows.Add(row);
+            }
+            return rows;
         }
     }
 }
