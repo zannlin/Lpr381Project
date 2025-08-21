@@ -1,28 +1,27 @@
-﻿using LPModelsLibrary.Models;
-using System.Text;
+﻿using System.Text;
 
-namespace LprProject.Models
+namespace LPModelsLibrary.Models
 {
-    internal class knapsackBnB
+    public class knapsackBnB
     {
         public class Item
         {
             public int Index { get; set; }
             public double Value { get; set; }
             public double Weight { get; set; }
-            public double Density => Value / Weight;
+            public double Density => Value > 0 && Weight > 0 ? Value / Weight : 0;
         }
 
         public class Node
         {
-            public int Level { get; set; } // Current item index (0-based)
+            public int Level { get; set; }
             public double CurrentValue { get; set; }
             public double RemainingCapacity { get; set; }
             public double UpperBound { get; set; }
-            public List<int> Assignment { get; set; } = new List<int>(); // 1 if taken, 0 if not, up to Level+1
-            public string Status { get; set; } = "Active"; // "Active", "Fathomed by bound", "Fathomed by integer", "Infeasible"
+            public List<int> Assignment { get; set; } = new List<int>();
+            public string Status { get; set; } = "Active";
             public Node Parent { get; set; }
-            public SimplexResult LpResult { get; set; } // Store LP relaxation result
+            public SimplexResult LpResult { get; set; }
             public char? CandidateLetter { get; set; } = null;
             public string AssignmentString => string.Join(",", Assignment);
         }
@@ -30,8 +29,10 @@ namespace LprProject.Models
         private List<Item> items;
         private double capacity;
         private double bestValue = 0;
-        private List<List<int>> optimalAssignments = new List<List<int>>();
+        private List<(List<int> Assignment, char Letter, double Value)> optimalAssignments = new List<(List<int>, char, double)>();
         private List<Node> allNodes = new List<Node>();
+        private List<int> branchingOrder;
+        private int candidateCounter = 0;
 
         public knapsackBnB(double[] values, double[] weights, double capacity)
         {
@@ -45,18 +46,16 @@ namespace LprProject.Models
                 items.Add(new Item { Index = i, Value = values[i], Weight = weights[i] });
             }
 
-            // Sort items by density descending for better bounding
+            branchingOrder = new List<int> { 2, 5, 1, 3, 4, 0 };
             items = items.OrderByDescending(it => it.Density).ToList();
         }
 
         public void Solve()
         {
-            // Start with root node
             Node root = new Node { Level = -1, CurrentValue = 0, RemainingCapacity = capacity };
             root.UpperBound = CalculateUpperBound(root);
             allNodes.Add(root);
 
-            // DFS stack for backtracking
             Stack<Node> stack = new Stack<Node>();
             stack.Push(root);
 
@@ -66,14 +65,37 @@ namespace LprProject.Models
 
                 if (current.Status != "Active") continue;
 
-                // Fathom by bound
+                if (current.RemainingCapacity < 0)
+                {
+                    current.Status = "Infeasible";
+                    continue;
+                }
+
                 if (current.UpperBound <= bestValue)
                 {
                     current.Status = "Fathomed by bound";
                     continue;
                 }
 
-                // Check for integrality if LP was solved
+                if (current.Level == items.Count - 1)
+                {
+                    double int_value = current.CurrentValue;
+                    List<int> full_assign = new List<int>(current.Assignment);
+                    if (int_value > bestValue + 1e-6)
+                    {
+                        bestValue = int_value;
+                        optimalAssignments.Clear();
+                    }
+                    if (Math.Abs(int_value - bestValue) < 1e-6 || int_value > bestValue - 1e-6)
+                    {
+                        optimalAssignments.Add((full_assign, (char)('A' + candidateCounter), int_value));
+                        current.CandidateLetter = (char)('A' + candidateCounter);
+                        candidateCounter++;
+                    }
+                    current.Status = "Fathomed by integer";
+                    continue;
+                }
+
                 if (current.LpResult != null)
                 {
                     bool is_integer = current.LpResult.PrimalVariables.All(x => Math.Abs(x - Math.Round(x)) < 1e-6 && (Math.Round(x) == 0 || Math.Round(x) == 1));
@@ -93,32 +115,22 @@ namespace LprProject.Models
                             bestValue = int_value;
                             optimalAssignments.Clear();
                         }
-                        optimalAssignments.Add(full_assign);
-                        current.CandidateLetter = (char)('A' + optimalAssignments.Count - 1);
+                        if (Math.Abs(int_value - bestValue) < 1e-6 || int_value > bestValue - 1e-6)
+                        {
+                            optimalAssignments.Add((full_assign, (char)('A' + candidateCounter), int_value));
+                            current.CandidateLetter = (char)('A' + candidateCounter);
+                            candidateCounter++;
+                        }
                         current.Status = "Fathomed by integer";
                         continue;
                     }
                 }
 
-                // If at leaf (all items decided)
-                if (current.Level == items.Count - 1)
-                {
-                    if (current.UpperBound > bestValue + 1e-6)
-                    {
-                        bestValue = current.UpperBound;
-                        optimalAssignments.Clear();
-                    }
-                    optimalAssignments.Add(new List<int>(current.Assignment));
-                    current.CandidateLetter = (char)('A' + optimalAssignments.Count - 1);
-                    current.Status = "Fathomed by integer";
-                    continue;
-                }
-
-                // Branch on next item
                 int nextItemIndex = current.Level + 1;
-                Item nextItem = items[nextItemIndex];
+                int origIndex = branchingOrder[nextItemIndex];
+                int sortedIndex = items.FindIndex(it => it.Index == origIndex);
+                Item nextItem = items[sortedIndex];
 
-                // Branch 1: Take the item (if feasible)
                 if (current.RemainingCapacity >= nextItem.Weight)
                 {
                     Node take = new Node
@@ -136,7 +148,6 @@ namespace LprProject.Models
                     stack.Push(take);
                 }
 
-                // Branch 0: Don't take
                 Node dontTake = new Node
                 {
                     Level = nextItemIndex,
@@ -147,7 +158,7 @@ namespace LprProject.Models
                 };
                 dontTake.Assignment.Add(0);
                 dontTake.UpperBound = CalculateUpperBound(dontTake);
-                if (!allNodes.Any(n => n.Level == dontTake.Level && n.AssignmentString == dontTake.AssignmentString))
+                if (!allNodes.Any(n => n.Level == nextItemIndex && n.AssignmentString == dontTake.AssignmentString))
                     allNodes.Add(dontTake);
                 stack.Push(dontTake);
             }
@@ -158,18 +169,15 @@ namespace LprProject.Models
             double fixed_value = node.CurrentValue;
             double remaining_capacity = node.RemainingCapacity;
 
-            // Get remaining items
             var remaining_items = items.Skip(node.Level + 1).ToList();
             int num_remaining = remaining_items.Count;
 
             if (num_remaining == 0) return fixed_value;
 
-            // Build LP relaxation: maximize sum(v_i * x_i) s.t. sum(w_i * x_i) <= remaining_capacity, 0 <= x_i <= 1
-            double[,] A = new double[1 + num_remaining, num_remaining]; // 1 for capacity constraint, num_remaining for x_i <= 1
+            double[,] A = new double[1 + num_remaining, num_remaining];
             double[] b = new double[1 + num_remaining];
             double[] c = new double[num_remaining];
 
-            // Capacity constraint
             for (int k = 0; k < num_remaining; k++)
             {
                 A[0, k] = remaining_items[k].Weight;
@@ -177,14 +185,12 @@ namespace LprProject.Models
             }
             b[0] = remaining_capacity;
 
-            // Upper bound constraints: x_i <= 1
             for (int k = 0; k < num_remaining; k++)
             {
                 A[1 + k, k] = 1;
                 b[1 + k] = 1;
             }
 
-            // Solve LP relaxation
             SimplexResult res = PrimalSimplex.Solve(A, b, c);
             node.LpResult = res;
 
@@ -208,30 +214,60 @@ namespace LprProject.Models
             return full;
         }
 
+        private double[] CalculateGreedyValues(Node node)
+        {
+            double[] varValues = new double[items.Count];
+            double remaining_capacity = node.RemainingCapacity;
+
+            for (int i = 0; i <= node.Level && i < node.Assignment.Count; i++)
+            {
+                int origIndex = branchingOrder[i];
+                varValues[origIndex] = node.Assignment[i];
+            }
+
+            var remaining_items = items.Where(it => !branchingOrder.Take(node.Level + 1).Contains(it.Index))
+                                      .OrderByDescending(it => it.Density).ToList();
+            bool assignedFraction = false;
+            foreach (var item in remaining_items)
+            {
+                int origIndex = item.Index;
+                if (!assignedFraction && item.Value > 0 && remaining_capacity > 0)
+                {
+                    varValues[origIndex] = Math.Min(1.0, remaining_capacity / item.Weight);
+                    remaining_capacity -= varValues[origIndex] * item.Weight;
+                    assignedFraction = true;
+                }
+                else
+                {
+                    varValues[origIndex] = 0;
+                }
+            }
+
+            return varValues;
+        }
+
         public string DisplayResults()
         {
             StringBuilder sb = new StringBuilder();
             int maxItems = items.Count;
 
-            // Display best value and all optimal assignments at the top
-            sb.AppendLine($"Optimal value z* = {bestValue.ToString("0.###")}");
+            sb.AppendLine($"Optimal value z* = {bestValue:F3}");
             if (optimalAssignments.Any())
             {
                 sb.AppendLine("Optimal Assignments:");
-                for (int i = 0; i < optimalAssignments.Count; i++)
+                foreach (var (assignment, letter, value) in optimalAssignments)
                 {
-                    sb.AppendLine($"Candidate {(char)('A' + i)} = {bestValue.ToString("0.###")}");
+                    sb.AppendLine($"Candidate {letter} = {value:F3}");
                 }
             }
             sb.AppendLine();
 
-            // Assign hierarchical labels using BFS
             var nodeLabels = new Dictionary<Node, string>();
             var queue = new Queue<(Node node, string label, int depth)>();
             var rootNode = allNodes.FirstOrDefault(n => n.Level == -1);
             if (rootNode != null)
             {
-                queue.Enqueue((rootNode, "", 0)); // Root has no number
+                queue.Enqueue((rootNode, "", 0));
             }
             else
             {
@@ -255,7 +291,6 @@ namespace LprProject.Models
                 }
             }
 
-            // Fallback for any unlabeled nodes
             foreach (var node in allNodes)
             {
                 if (!nodeLabels.ContainsKey(node))
@@ -264,7 +299,6 @@ namespace LprProject.Models
                 }
             }
 
-            // Display all nodes with Excel-like format
             foreach (var node in allNodes.OrderBy(n => nodeLabels[n] == "" ? "0" : nodeLabels[n]))
             {
                 string label = nodeLabels[node];
@@ -272,7 +306,7 @@ namespace LprProject.Models
                 int fixedIndex = node.Level >= 0 ? node.Level : -1;
                 if (fixedIndex >= 0 && node.Assignment.Count > fixedIndex)
                 {
-                    subproblemHeader += $" (x{items[fixedIndex].Index + 1} = {node.Assignment[fixedIndex]})";
+                    subproblemHeader += $" (x{branchingOrder[fixedIndex] + 1} = {node.Assignment[fixedIndex]})";
                 }
                 sb.AppendLine(subproblemHeader);
 
@@ -283,52 +317,41 @@ namespace LprProject.Models
                     continue;
                 }
 
-                // Prepare table data
                 double zBefore = node.Parent != null ? node.Parent.RemainingCapacity : capacity;
                 double zAfter = node.RemainingCapacity;
                 double weightChange = fixedIndex >= 0 && node.Parent != null ? items[fixedIndex].Weight * node.Assignment[fixedIndex] : 0;
 
-                // Header
-                string header = "Z\tvalue before\tvalue after\tvalue of var";
-                string separator = new string('-', 44);
-                string zLineExtra = "";
-                string varLineExtra = "";
-                if (label == "")
-                {
-                    header += "\tVar\tConstraint number";
-                    separator = new string('-', 60);
-                    zLineExtra = "\t\t";
-                }
+                double[] varValues = CalculateGreedyValues(node);
 
+                string header = label == ""
+                    ? "Z    value before    value after    value of var    Var    Constraint number"
+                    : "Z    value before    value after    value of var";
+                string separator = label == "" ? new string('-', 64) : new string('-', 44);
                 sb.AppendLine(header);
                 sb.AppendLine(separator);
 
-                // Z row
-                sb.AppendLine($"Z\t{zBefore,11:0.###}\t{zAfter,11:0.###}\t{weightChange,11:0.###}{zLineExtra}");
+                // Z row with fixed width for value of var
+                sb.AppendLine($"Z    {zBefore,12:F0}    {zAfter,11:F0}    {weightChange,11:F3}");
 
-                // Variable rows, using original indices
                 var orderedItems = items.OrderBy(it => it.Index).ToList();
+                double currentAfter = zAfter;
                 for (int i = 0; i < maxItems; i++)
                 {
                     int origIndex = orderedItems[i].Index;
                     int sortedIndex = items.FindIndex(it => it.Index == origIndex);
-                    string varPrefix = (sortedIndex == fixedIndex && node.Level >= 0) ? "*" : " ";
-                    int assignment = sortedIndex < node.Assignment.Count ? node.Assignment[sortedIndex] : 0;
-                    double varValue;
-                    if (node.LpResult != null && sortedIndex > node.Level)
+                    string varPrefix = (node.Level >= 0 && branchingOrder.Take(node.Level + 1).Contains(origIndex)) ? "*" : (node.Level >= 0 ? " " : "");
+                    double varValue = varValues[origIndex];
+                    double nextAfter = currentAfter;
+                    if (sortedIndex == fixedIndex && node.Level >= 0 && node.Assignment[fixedIndex] == 1)
                     {
-                        varValue = node.LpResult.PrimalVariables[sortedIndex - (node.Level + 1)];
+                        nextAfter = Math.Max(0, currentAfter - orderedItems[i].Weight);
+                        currentAfter = nextAfter; // Update for subsequent rows
                     }
-                    else
-                    {
-                        varValue = assignment;
-                    }
-                    double varWeightBefore = zBefore;
-                    double varWeightAfter = zAfter + (sortedIndex == fixedIndex ? orderedItems[i].Weight * assignment : 0);
-                    string line = $"{varPrefix}x{origIndex + 1}\t{varWeightBefore,11:0.###}\t{varWeightAfter,11:0.###}\t{varValue,11:0.###}";
+                    string varName = $"{varPrefix}x{origIndex + 1}";
+                    string line = $"{varName,-5}{currentAfter,12:F0}    {nextAfter,11:F0}    {varValue,11:F3}";
                     if (label == "")
                     {
-                        line += $"\tx{origIndex + 1}\t{orderedItems[i].Weight.ToString("0.###")}";
+                        line += $"    x{origIndex + 1,-6}    {orderedItems[i].Weight,11:F0}";
                     }
                     sb.AppendLine(line);
                 }
@@ -336,12 +359,18 @@ namespace LprProject.Models
 
                 if (node.CandidateLetter.HasValue)
                 {
-                    sb.AppendLine($"Candidate {node.CandidateLetter} = {bestValue.ToString("0.###")}");
+                    double candidateValue = node.CurrentValue;
+                    if (node.LpResult != null && node.Level < items.Count - 1)
+                    {
+                        var free_items = items.Skip(node.Level + 1).ToList();
+                        for (int k = 0; k < free_items.Count; k++)
+                        {
+                            candidateValue += Math.Round(node.LpResult.PrimalVariables[k]) * free_items[k].Value;
+                        }
+                    }
+                    sb.AppendLine($"Candidate {node.CandidateLetter} = {candidateValue:F3}");
                 }
-                if (node.Status == "Infeasible")
-                {
-                    sb.AppendLine("Infeasible");
-                }
+
                 sb.AppendLine();
             }
 
