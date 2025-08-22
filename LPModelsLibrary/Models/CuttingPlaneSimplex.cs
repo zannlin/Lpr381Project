@@ -1,9 +1,4 @@
-﻿using Lpr381Project; // for SimplexResult, TableauTemplate
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace LPModelsLibrary.Models
+﻿namespace LPModelsLibrary.Models
 {
     public class CuttingPlaneSimplex
     {
