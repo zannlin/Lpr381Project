@@ -11,7 +11,7 @@
             optimalTableau = cuttingPlaneResult.Tableaus.LastOrDefault()
                               ?? throw new InvalidOperationException("No tableau available in the result.");
         }
-        private void DualSimplex(TableauTemplate tab, double eps = 1e-9)
+        public void DualSimplex(TableauTemplate tab, double eps = 1e-9)
         {
 
             int m = tab.Tableau.GetLength(0);
