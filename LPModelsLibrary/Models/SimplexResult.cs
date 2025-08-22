@@ -12,6 +12,7 @@ namespace LPModelsLibrary.Models
         public double[] PrimalVariables { get; set; } = Array.Empty<double>();
         public bool IsUnbounded { get; set; }
         public bool IsInfeasible { get; set; }
+        public double[] SlackExcessVariables { get; set; } = Array.Empty<double>();
         public List<TableauTemplate> Tableaus { get; set; } = new();
         public string Message { get; set; } = "";
     }
