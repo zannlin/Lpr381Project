@@ -4,7 +4,7 @@
     {
         private List<string> DummyObjectiveFunction;
         private List<string> DummyConstraint;
-        public string constrint_ineqaulity = string.Empty;
+        public string problem_ineqaulity = string.Empty;
 
         public double[] ObjectiveFuntion;
         public double[,] Constraints;
@@ -18,7 +18,7 @@
             SplitObjectiveFunctionAndConstraint(content);
             CreateObjectiveFunction();
             createConstraint();
-            
+            ApplyBinaryConstraints();
 
         }
 
@@ -27,18 +27,18 @@
             int counter = 0;
             foreach (string line in content)
             {
-                
+
                 string[] lineParts = line.Split(' ');
                 foreach (string part in lineParts)
                 {
-                   
+
                     if (counter == 0)
                     {
                         DummyObjectiveFunction.Add(part);
                     }
-                   
+
                 }
-                if(counter  != 0)
+                if (counter != 0)
                 {
                     DummyConstraint.Add(line);
                 }
@@ -46,15 +46,16 @@
                 counter++;
 
             }
-           
+
         }
-    
+
         public void CreateObjectiveFunction()
         {
-            
+
             Console.WriteLine($"Objective Function Count {DummyObjectiveFunction.Count}:");
             ObjectiveFuntion = new double[DummyObjectiveFunction.Count];
             DummyObjectiveFunction.RemoveAt(0);
+
 
 
             for (int i = 0; i < DummyObjectiveFunction.Count; i++)
@@ -72,10 +73,10 @@
 
         public void createConstraint()
         {
-            
+            problem_ineqaulity = DummyConstraint[DummyConstraint.Count - 1].Split(' ')[0];
             DummyConstraint.RemoveAt(DummyConstraint.Count - 1); // Remove the last element which is the inequality constraint
             int numberOfConstraints = DummyConstraint.Count;
-            Constraints = new double[numberOfConstraints, ObjectiveFuntion.Length-1];
+            Constraints = new double[numberOfConstraints, ObjectiveFuntion.Length - 1];
             int counter = 0;
             RightHandSide = new double[numberOfConstraints];
 
@@ -83,7 +84,7 @@
 
             foreach (string constraint in DummyConstraint)
             {
-                
+
                 string[] parts = constraint.Split(' ');
                 for (int i = 0; i < Constraints.GetLength(1); i++)
                 {
@@ -98,7 +99,7 @@
                         Console.WriteLine($"Invalid value in constraint: {parts[i]}");
                     }
 
-                } 
+                }
                 Console.WriteLine($"Right Hand Side {parts[parts.Length - 1]}");
                 if (double.TryParse(parts[parts.Length - 1].Substring(2), out double rhsValue))
                 {
@@ -125,11 +126,11 @@
 
         public void PrintObjectiveFunction()
         {
-           for (int i = 0; i < ObjectiveFuntion.Length; i++)
+            for (int i = 0; i < ObjectiveFuntion.Length; i++)
             {
                 Console.WriteLine($"Objective Function {i}: {ObjectiveFuntion[i]}");
             }
-            
+
 
         }
 
@@ -139,7 +140,44 @@
             {
                 Console.WriteLine(DummyConstraint[i]);
             }
-            Console.WriteLine($"Constraint inequality {constrint_ineqaulity}");
+            Console.WriteLine($"Constraint inequality {problem_ineqaulity}");
+        }
+
+        public void ApplyBinaryConstraints()
+        {
+            if (problem_ineqaulity.ToLower() == "bin")
+            {
+                int nVars = ObjectiveFuntion.Length;
+                int oldConstraints = Constraints.GetLength(0);
+                int newConstraints = oldConstraints + nVars;
+
+                double[,] newConstraintsMatrix = new double[newConstraints, nVars];
+                double[] newRhs = new double[newConstraints];
+
+                // Copy old constraints to new variables
+                for (int i = 0; i < oldConstraints; i++)
+                {
+                    for (int j = 0; j < nVars-1; j++) // we say minus 1 becuase we dont want to include "max" as part of the count
+                    {
+                        newConstraintsMatrix[i, j] = Constraints[i, j];
+                    }
+                    newRhs[i] = RightHandSide[i];
+                }
+
+                // Add xi <= 1 constraints
+                int row = oldConstraints;
+                for (int i = 0; i < nVars; i++)
+                {
+
+                    newConstraintsMatrix[row, i] = 1;
+                    newRhs[row] = 1;
+                    row++;
+                }
+
+                // Replace old constraints
+                Constraints = newConstraintsMatrix;
+                RightHandSide = newRhs;
+            }
         }
     }
 }

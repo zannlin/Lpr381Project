@@ -13,16 +13,17 @@ class Program
         LinearModel model = new LinearModel(content);
         double[] objectiveFunction = model.ObjectiveFuntion;
         double[,] constraint = model.Constraints;
+
         double[] rhs = model.RightHandSide;
         SimplexResult result = PrimalSimplex.Solve(constraint, rhs, objectiveFunction);
 
         CuttingPlaneSimplex cp = new CuttingPlaneSimplex(result);
         foreach (var item in result.Tableaus)
         {
-            Console.WriteLine(item.ToString());
+          Console.WriteLine(item.ToString());
         }
         cp.solveCuttingPlane();
-        Console.WriteLine(cp.cuttingPlaneResult.printTables());
+         Console.WriteLine(cp.cuttingPlaneResult.printTables());
 
     }
     

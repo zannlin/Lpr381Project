@@ -38,7 +38,6 @@
                     // 4. Repeat until an integer solution is found or infeasibility is determined
                     tab.ColHeaders = updateColumnHeaders(tab.ColHeaders);
                     tab.RowHeaders = updateRowHeaders(tab.RowHeaders);
-                    tab.Iteration += 1;
                     cuttingPlaneResult.Tableaus.Add(tab);
                     currentTableau = tab.Tableau;
                     isInteger = IsIntegerSolution(currentTableau);
@@ -116,22 +115,7 @@
                 // 3) pivot and update row header for the basic variable
                 tab.Tableau = Pivot(tab.Tableau, pr, pc, eps);
 
-                for (int i = 0; i < tab.Tableau.GetLength(0); i++)
-                {
-                    for (int j = 0; j < tab.Tableau.GetLength(1); j++)
-                    {
-                        Console.Write($"{tab.Tableau[i, j]} ");
-                    }
-                    Console.WriteLine();
-                }
-                Console.Read();
-
-                if (tab.RowHeaders != null && tab.ColHeaders != null &&
-                    pr >= 0 && pr < tab.RowHeaders.Length &&
-                    pc >= 0 && pc < tab.ColHeaders.Length)
-                {
-                    tab.RowHeaders[pr] = tab.ColHeaders[pc];
-                }
+                
             }
             return tab;
 
@@ -175,12 +159,12 @@
             double closestFractionalValue = double.MaxValue;
             int rowIndex = -1;
 
-            for( int i  = 0; i < rows; i++) // Exclude the last row (objective function)
+            for( int i  =0; i < rows; i++) // Exclude the last row (objective function)
             {
                 double rhsValue = currentTablue[i, cols - 1]; 
                 
 
-                rhsValue = rhsValue - Math.Truncate(rhsValue);
+                rhsValue = rhsValue - Math.Floor(rhsValue);
                 if(Math.Abs(rhsValue - 0.5) < Math.Abs(closestFractionalValue - 0.5))
                 {
                     closestFractionalValue = rhsValue;
