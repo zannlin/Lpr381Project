@@ -1,10 +1,10 @@
-﻿namespace Lpr381Project
+﻿namespace LPModelsLibrary.Models
 {
-    internal class LinearModel
+    public class LinearModel
     {
         private List<string> DummyObjectiveFunction;
         private List<string> DummyConstraint;
-        public string constrint_ineqaulity = String.Empty;
+        public string constrint_ineqaulity = string.Empty;
 
         public double[] ObjectiveFuntion;
         public double[,] Constraints;
@@ -54,7 +54,8 @@
             
             Console.WriteLine($"Objective Function Count {DummyObjectiveFunction.Count}:");
             ObjectiveFuntion = new double[DummyObjectiveFunction.Count];
-            DummyObjectiveFunction.RemoveAt(0); 
+            DummyObjectiveFunction.RemoveAt(0);
+
 
             for (int i = 0; i < DummyObjectiveFunction.Count; i++)
             {

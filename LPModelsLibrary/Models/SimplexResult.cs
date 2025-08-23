@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPR_Form.Models
+namespace LPModelsLibrary.Models
 {
-    internal class SimplexResult
+    public class SimplexResult
     {
         public double OptimalValue { get; set; }
         public double[] PrimalVariables { get; set; } = Array.Empty<double>();
         public bool IsUnbounded { get; set; }
         public bool IsInfeasible { get; set; }
+        public double[] SlackExcessVariables { get; set; } = Array.Empty<double>();
         public List<TableauTemplate> Tableaus { get; set; } = new();
         public string Message { get; set; } = "";
     }

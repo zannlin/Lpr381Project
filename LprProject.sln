@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36327.8 d17.14
+VisualStudioVersion = 17.14.36327.8
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LprProject", "LprProject\LprProject.csproj", "{A738E44D-8551-4757-AFC5-415565D396F5}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestModels", "TestModels\TestModels.csproj", "{1B9E7145-9DF0-4001-AA26-F8AF01CEE4FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LPModelsLibrary", "LPModelsLibrary\LPModelsLibrary.csproj", "{8A98106C-02F4-45C0-B1E5-81845B66467E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,14 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A738E44D-8551-4757-AFC5-415565D396F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A738E44D-8551-4757-AFC5-415565D396F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A738E44D-8551-4757-AFC5-415565D396F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A738E44D-8551-4757-AFC5-415565D396F5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1B9E7145-9DF0-4001-AA26-F8AF01CEE4FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1B9E7145-9DF0-4001-AA26-F8AF01CEE4FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1B9E7145-9DF0-4001-AA26-F8AF01CEE4FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1B9E7145-9DF0-4001-AA26-F8AF01CEE4FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A98106C-02F4-45C0-B1E5-81845B66467E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A98106C-02F4-45C0-B1E5-81845B66467E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A98106C-02F4-45C0-B1E5-81845B66467E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A98106C-02F4-45C0-B1E5-81845B66467E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
