@@ -16,7 +16,38 @@ namespace LPR_Form.Models
             optimalTableau = cuttingPlaneResult.Tableaus.LastOrDefault()
                               ?? throw new InvalidOperationException("No tableau available in the result.");
         }
-        private void DualSimplex(TableauTemplate tab, double eps = 1e-9)
+
+        public void solveCuttingPlane()
+        {
+
+            var tab = optimalTableau;
+            var currentTableau = tab.Tableau;
+            // Implement the cutting plane method here
+            // 1. Check if the current solution is integer
+            bool isInteger = IsIntegerSolution(currentTableau);
+
+            while (!isInteger)
+            {
+                //2. add a cutting plane constraint
+                double[] newConstraint = CreateConstraint(currentTableau);
+                double[,] newTableau = addConstraint(currentTableau, newConstraint);
+                tab.Tableau = newTableau;
+
+                // 3. Re-solve using dual simplex
+                tab = DualSimplex(tab);
+                // 4. Repeat until an integer solution is found or infeasibility is determined
+                cuttingPlaneResult.Tableaus.Add(tab);
+                // Example: Perform dual simplex on the current tableau
+
+                // After dual simplex, check for integrality and add cutting planes as needed
+                // This is a placeholder for the actual cutting plane logic 
+            }
+
+
+
+
+        }
+        private TableauTemplate DualSimplex(TableauTemplate tab, double eps = 1e-9)
         {
 
             int m = tab.Tableau.GetLength(0);
@@ -81,7 +112,7 @@ namespace LPR_Form.Models
                     tab.RowHeaders[pr] = tab.ColHeaders[pc];
                 }
             }
-
+            return tab;
 
         }
 
@@ -114,21 +145,24 @@ namespace LPR_Form.Models
                     if (Math.Abs(T[i, j]) < eps) T[i, j] = 0.0;
         }
 
-        private List<List<double>> ToRowList(double[,] tableau)
+        private double [] CreateConstraint(double[,] currentTablue)
         {
-            int m = tableau.GetLength(0);
-            int n = tableau.GetLength(1);
-            var rows = new List<List<double>>(m);
-            for (int i = 0; i < m; i++)
-            {
-                var row = new List<double>(n);
-                for (int j = 0; j < n; j++)
-                {
-                    row.Add(tableau[i, j]);
-                }
-                rows.Add(row);
-            }
-            return rows;
+            // Create a new constraint from the current tableau
+                
+
+            return null;
+        }
+
+        private double[,] addConstraint(double[,] currentTableau,double[] constraint)
+        {
+            // Add the new constraint to the tableau
+            return null;
+        }
+
+        private bool IsIntegerSolution(double[,] tableau)
+        {
+            // Check if the current solution is integer
+            return false;
         }
     }
 }
