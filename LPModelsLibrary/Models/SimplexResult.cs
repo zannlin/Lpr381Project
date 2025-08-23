@@ -19,7 +19,7 @@ namespace LPModelsLibrary.Models
         public string printTables()
         {
             string tables = "";
-            for (int i = 0; i < Tableaus.Count; i++)
+            for (int i = 0; i < Tableaus.Count-1; i++)
             {
                 tables+=(Tableaus[i].ToString());
                 tables+=("\n");

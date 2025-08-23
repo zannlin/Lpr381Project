@@ -10,6 +10,7 @@
             cuttingPlaneResult = result ?? throw new InvalidOperationException("No Simplex Result found in the result.");
             optimalTableau = cuttingPlaneResult.Tableaus.LastOrDefault()
                               ?? throw new InvalidOperationException("No tableau available in the result.");
+  
         }
 
         public void solveCuttingPlane()
@@ -91,6 +92,7 @@
                 // 2) entering column via dual ratio test: argmin_j { z_j / (-a_prj) | a_prj < 0 }
                 int pc = -1;
                 double bestRatio = double.PositiveInfinity;
+                double[] dualRatios = new double[rhs];
                 for (int j = 0; j < rhs; j++) // exclude RHS
                 {
                     double a = tab.Tableau[pr, j];
@@ -98,6 +100,7 @@
                     {
                         double zj = tab.Tableau[zRow, j];
                         double ratio = zj / (-a);
+                        dualRatios[j] = ratio;
                         if (ratio < bestRatio - 1e-15)
                         {
                             bestRatio = ratio;
@@ -111,11 +114,18 @@
                     
                     throw new InvalidOperationException("LP is primal infeasible (dual unbounded).");
                 }
+                // Create and store PriceOutInfo information for display
+               
+               
 
-                // 3) pivot and update row header for the basic variable
+                // 3) pivot on (pr, pc)
                 tab.Tableau = Pivot(tab.Tableau, pr, pc, eps);
+                double pivotElement = tab.Tableau[pr, pc];
 
-                
+                // create and store PivotInfo information for display
+             
+
+
             }
             return tab;
 

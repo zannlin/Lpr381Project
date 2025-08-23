@@ -18,12 +18,17 @@ class Program
         SimplexResult result = PrimalSimplex.Solve(constraint, rhs, objectiveFunction);
 
         CuttingPlaneSimplex cp = new CuttingPlaneSimplex(result);
+        cp.solveCuttingPlane();
         foreach (var item in result.Tableaus)
         {
           Console.WriteLine(item.ToString());
         }
-        cp.solveCuttingPlane();
-         Console.WriteLine(cp.cuttingPlaneResult.printTables());
+        
+        //Console.WriteLine(cp.cuttingPlaneResult.printTables());
+        var optimalTableau = result.Tableaus.Last();
+        MathematicalSensitivity ms = new MathematicalSensitivity(optimalTableau);
+        (double lower, double upper) = ms.Range_Of_NonBasic_Variable(12);
+        Console.WriteLine($"Range of Non-Basic Variable x3: Lower Bound = {lower}, Upper Bound = {upper}");
 
     }
     
