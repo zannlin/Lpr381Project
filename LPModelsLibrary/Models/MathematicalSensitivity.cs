@@ -237,15 +237,14 @@ namespace LPModelsLibrary.Models
             double lower  =  -999, upper = 999;
             int gaurdMax = 1000;
             int gaurd = 0;
-            double increment = 1;
-            double oldValue = originalTab.Tableau[0, columnIndex];
+            double increment = 0.1;
+            double oldValue = Math.Abs(originalTab.Tableau[0, columnIndex]);
 
             while (!lowerBoundFound)
             {
 
                 double newValue = oldValue - increment;
                 Console.WriteLine($"Trying new value: {newValue}");
-                Console.Read();
                 double cj = newValue;
                 double[] cBV = getCbv();
                 for (int i = 0; i < cBV.Length; i++)
@@ -255,6 +254,7 @@ namespace LPModelsLibrary.Models
                         cBV[i] = Math.Abs(newValue);
                         break;
                     }
+                    
                 }
 
                 double[,] BInverse = InverseMatrix(constructBMatrix());
@@ -264,14 +264,20 @@ namespace LPModelsLibrary.Models
                     aj[i - 1] = originalTab.Tableau[i, columnIndex];
                 }
                 double lhsNew = ComputeLHS(cBV, BInverse, aj) - cj;
-                if (lhsNew < 0)
+                if (lhsNew <= 0)
                 {
                     lower = newValue;
                     lowerBoundFound = true;
                 }
-                ; // just a dummy calculation to use the new value
-                increment += 1;
-                // we need to change the cbv here
+                ; 
+                increment += increment;
+               
+
+                if(lhs<= 0)
+                {
+                    lower = newValue;
+                    break;
+                }
             }
 
            
@@ -289,17 +295,20 @@ namespace LPModelsLibrary.Models
 
         }
 
-        public string change_Basic_Variable_Coefficient(int columnIndex, double newCoefficient)
+        public double change_Basic_Variable_Coefficient(int columnIndex, double newCoefficient)
         {
+            // The reason this isnt working is because when changing the cbv we need to see the changes for all thevalues in the z row not  just the one we are changing
+            // Those values will change as well, so we need to recalculate the entire z row.
             double cj = newCoefficient;
             double[] cBV = getCbv();
             double oldValue = originalTab.Tableau[0, columnIndex];
+            List<int> basicColumnIndices = getBasicVarColumnIndex();
             // we need to change the cbv here
 
 
             for (int i = 0; i < cBV.Length; i++)
             {
-                if (cBV[i] == Math.Abs(oldValue))
+                if (basicColumnIndices[i]  == columnIndex)
                 {
                     cBV[i] = Math.Abs(newCoefficient);
                     break;
@@ -310,14 +319,40 @@ namespace LPModelsLibrary.Models
             double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
             for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
             {
-                aj[i - 1] = originalTab.Tableau[i, columnIndex];
+                aj[i-1] = originalTab.Tableau[i, columnIndex];
             }
 
-            double lhs = ComputeLHS(cBV, BInverse, aj) - cj;
+            for( int  i =  0; i < cBV.Length; i++)
+            {
+                Console.WriteLine($"cB[{i}] = {cBV[i]}");
+            }
+
+            Console.WriteLine("B Inverse Matrix:");
+            for (int i = 0; i < BInverse.GetLength(0); i++)
+            {
+                for (int j = 0; j < BInverse.GetLength(1); j++)
+                {
+                    Console.Write($"{BInverse[i, j]} ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("aj:");
+            for (int i = 0; i < aj.Length; i++)
+            {
+                Console.WriteLine($"a[{i}] = {aj[i]}");
+            }
+
+
+
+
+            double lhs = ComputeLHS(cBV, BInverse, aj)  - cj;
             string orignalInfo = "The original optimal value is for this variable was: " + optimalTab.Tableau[0, columnIndex];
             string middle = $"Changing the variable from {Math.Abs(oldValue)} to {newCoefficient} ";
             string rangeInfo = $"The new optimal value for {optimalTab.ColHeaders[columnIndex]} is {lhs}";
-            return orignalInfo + "\n" + middle + "\n" + rangeInfo;
+
+            Console.WriteLine(orignalInfo + "\n" + middle +  "\n" + rangeInfo);
+            return lhs;
 
         }
 
