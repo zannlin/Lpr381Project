@@ -20,68 +20,6 @@ namespace LPModelsLibrary.Models
             // just output the general sensitivity analysis information
         }
 
-        public (double lowerbound,double upperbound) Range_Of_NonBasic_Variable(int columnIndex)
-        {
-
-            Console.WriteLine("Range of Non Basic Variable");
-
-            Console.WriteLine("Optimal Tableau");
-            Console.WriteLine(optimalTab.ToString());
-            // Cj∗​=cBV​B−1aj​−(cj​+Δ) Formulate for non basic variable
-            double cj = originalTab.Tableau[0, columnIndex]*-1;
-            double[] cBV = getCbv();
-            double[,] BInverse = InverseMatrix(constructBMatrix());
-            double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
-            for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
-            {
-                aj[i - 1] = originalTab.Tableau[i, columnIndex];
-            }
-
-            double lhs = ComputeLHS(cBV, BInverse, aj) - cj;
-            string rangeInfo = deltaRangeNonBasicVariable(lhs, cj);
-
-            Console.WriteLine("CJ :");
-            Console.WriteLine($"c[{columnIndex}] = {cj}");
-
-            Console.WriteLine("cBV:");
-            for (int i = 0; i < cBV.Length; i++)
-            {
-                Console.WriteLine($"cB[{i}] = {cBV[i]}");
-            }
-
-            Console.WriteLine("B Matrix:");
-            double[,] B = constructBMatrix();
-            for (int i = 0; i < B.GetLength(0); i++)
-            {
-                for (int j = 0; j < B.GetLength(1); j++)
-                {
-                    Console.Write($"{B[i, j]} ");
-                }
-                Console.WriteLine();
-            }
-
-            Console.WriteLine("B Inverse Matrix:");
-            for (int i = 0; i < BInverse.GetLength(0); i++)
-            {
-                for (int j = 0; j < BInverse.GetLength(1); j++)
-                {
-                    Console.Write($"{BInverse[i, j]} ");
-                }
-                Console.WriteLine();
-            }
-
-            Console.WriteLine("aj:");
-            for (int i = 0; i < aj.Length; i++)
-            {
-                Console.WriteLine($"a[{i}] = {aj[i]}");
-            }
-
-            Console.WriteLine($"LHS (cBV * B^-1 * aj) = {lhs}");
-            Console.WriteLine($"Range Information: {rangeInfo}");
-
-            return (2,2);
-        }
-
         private double ComputeLHS(double[] cBV, double[,] Binv, double[] aj)
         {
             // Multiply Binv * aj
@@ -198,32 +136,194 @@ namespace LPModelsLibrary.Models
 
             Matrix<double> matrix = Matrix<double>.Build.DenseOfArray(matrixToInverse);
             
-return matrix.Inverse().ToArray();
+            return matrix.Inverse().ToArray();
             
         }
 
-
-
-
-
-        private void range_Of_Basic_Variable(int columnIndex)
+        private double computeRHSValue(double cbv,double BInverse)
         {
-            // should return the range of a basic variable
+            return 0;
         }
 
-        private void change_nonBasic_Variable_Coefficient(int columnIndex, double newCoefficient)
+
+        public string Range_Of_NonBasic_Variable(int columnIndex)
         {
-            // should return the new optimal solution after changing the coefficient of a non basic variable
+
+            Console.WriteLine("Range of Non Basic Variable");
+
+            Console.WriteLine("Optimal Tableau");
+            Console.WriteLine(optimalTab.ToString());
+            // Cj∗​=cBV​B−1aj​−(cj​+Δ) Formulate forcalculate the range of optimality for a  variable
+            double cj = originalTab.Tableau[0, columnIndex] * -1;
+            double[] cBV = getCbv();
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
+            for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+            {
+                aj[i - 1] = originalTab.Tableau[i, columnIndex];
+            }
+
+            double lhs = ComputeLHS(cBV, BInverse, aj) - cj;
+            string rangeInfo = deltaRangeNonBasicVariable(lhs, cj);
+
+            Console.WriteLine("CJ :");
+            Console.WriteLine($"c[{columnIndex}] = {cj}");
+
+            Console.WriteLine("cBV:");
+            for (int i = 0; i < cBV.Length; i++)
+            {
+                Console.WriteLine($"cB[{i}] = {cBV[i]}");
+            }
+
+            Console.WriteLine("B Matrix:");
+            double[,] B = constructBMatrix();
+            for (int i = 0; i < B.GetLength(0); i++)
+            {
+                for (int j = 0; j < B.GetLength(1); j++)
+                {
+                    Console.Write($"{B[i, j]} ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("B Inverse Matrix:");
+            for (int i = 0; i < BInverse.GetLength(0); i++)
+            {
+                for (int j = 0; j < BInverse.GetLength(1); j++)
+                {
+                    Console.Write($"{BInverse[i, j]} ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("aj:");
+            for (int i = 0; i < aj.Length; i++)
+            {
+                Console.WriteLine($"a[{i}] = {aj[i]}");
+            }
+
+            Console.WriteLine($"LHS (cBV * B^-1 * aj) = {lhs}");
+            Console.WriteLine($"Range Information: {rangeInfo}");
+
+            return rangeInfo;
         }
 
-        private void change_Basic_Variable_Coefficient(int columnIndex, double newCoefficient)
+
+        public string change_nonBasic_Variable_Coefficient(int columnIndex, double newCoefficient)
         {
-            // should return the new optimal solution after changing the coefficient of a basic variable
+            double cj = newCoefficient;
+            double[] cBV = getCbv();
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
+            for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+            {
+                aj[i - 1] = originalTab.Tableau[i, columnIndex];
+            }
+
+            double lhs = ComputeLHS(cBV, BInverse, aj) - cj;
+            string orignalRange  = "The original optimal value is for this variable was: " + optimalTab.Tableau[0, columnIndex];
+            string middle = $"Changing the variable from {Math.Abs(originalTab.Tableau[0, columnIndex])} to {newCoefficient} ";
+            string rangeInfo = $"The new optimal value for {optimalTab.ColHeaders[columnIndex]} is {lhs}";
+
+            // We  still need to deal with the dboule round ie 1.9999999999991 -> 2
+            return orignalRange + "\n" + middle + "\n" + rangeInfo;
+        }
+
+        public string range_Of_Basic_Variable(int columnIndex)
+        {
+            double lhs  = 1;
+            bool upperBoundFound  = false;
+            bool lowerBoundFound  = false;
+            double lower  =  -999, upper = 999;
+            int gaurdMax = 1000;
+            int gaurd = 0;
+            double increment = 1;
+            double oldValue = originalTab.Tableau[0, columnIndex];
+
+            while (!lowerBoundFound)
+            {
+
+                double newValue = oldValue - increment;
+                Console.WriteLine($"Trying new value: {newValue}");
+                Console.Read();
+                double cj = newValue;
+                double[] cBV = getCbv();
+                for (int i = 0; i < cBV.Length; i++)
+                {
+                    if (cBV[i] == Math.Abs(oldValue))
+                    {
+                        cBV[i] = Math.Abs(newValue);
+                        break;
+                    }
+                }
+
+                double[,] BInverse = InverseMatrix(constructBMatrix());
+                double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
+                for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+                {
+                    aj[i - 1] = originalTab.Tableau[i, columnIndex];
+                }
+                double lhsNew = ComputeLHS(cBV, BInverse, aj) - cj;
+                if (lhsNew < 0)
+                {
+                    lower = newValue;
+                    lowerBoundFound = true;
+                }
+                ; // just a dummy calculation to use the new value
+                increment += 1;
+                // we need to change the cbv here
+            }
+
+           
+            double lowerRange = lowerBoundFound ? lower - oldValue : 0;
+            string rangeInfo = "";
+
+           
+        
+            
+             rangeInfo = $"{optimalTab.ColHeaders[columnIndex]}  is greater than {lowerRange}";
+            
+           
+            
+            return rangeInfo;
+
+        }
+
+        public string change_Basic_Variable_Coefficient(int columnIndex, double newCoefficient)
+        {
+            double cj = newCoefficient;
+            double[] cBV = getCbv();
+            double oldValue = originalTab.Tableau[0, columnIndex];
+            // we need to change the cbv here
+
+
+            for (int i = 0; i < cBV.Length; i++)
+            {
+                if (cBV[i] == Math.Abs(oldValue))
+                {
+                    cBV[i] = Math.Abs(newCoefficient);
+                    break;
+                }
+            }
+
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
+            for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+            {
+                aj[i - 1] = originalTab.Tableau[i, columnIndex];
+            }
+
+            double lhs = ComputeLHS(cBV, BInverse, aj) - cj;
+            string orignalInfo = "The original optimal value is for this variable was: " + optimalTab.Tableau[0, columnIndex];
+            string middle = $"Changing the variable from {Math.Abs(oldValue)} to {newCoefficient} ";
+            string rangeInfo = $"The new optimal value for {optimalTab.ColHeaders[columnIndex]} is {lhs}";
+            return orignalInfo + "\n" + middle + "\n" + rangeInfo;
+
         }
 
         private void range_RightHandSide(int rowIndex)
         {
-            // should return the range of a right hand side value of a constraint
+            
         }
 
         private void change_RightHandSide(int rowIndex, double newValue)
