@@ -8,10 +8,12 @@ namespace LPModelsLibrary.Models
 {
     public class MathematicalSensitivity
     {
-        private TableauTemplate tab;
-        public MathematicalSensitivity(TableauTemplate tab)
+        private TableauTemplate optimalTab;
+        private TableauTemplate originalTab;
+        public MathematicalSensitivity(TableauTemplate optimalTable,TableauTemplate originalTab)
         {
-            this.tab = tab;
+            this.optimalTab = optimalTable;
+            this.originalTab = originalTab;
         }
         private void SensitivityAnalysis()
         {
@@ -20,10 +22,123 @@ namespace LPModelsLibrary.Models
 
         public (double lowerbound,double upperbound) Range_Of_NonBasic_Variable(int columnIndex)
         {
+
+            Console.WriteLine("Range of Non Basic Variable");
+
+            Console.WriteLine("Optimal Tableau");
+            Console.WriteLine(optimalTab.ToString());
+            // Cj∗​=cBV​B−1aj​−(cj​+Δ) Formulate for non basic variable
+            double cj = originalTab.Tableau[0, columnIndex];
+            double[] cBV = getCbv();
+
+            Console.WriteLine("cBV:");
+            for (int i = 0; i < cBV.Length; i++)
+            {
+                Console.WriteLine($"cB[{i}] = {cBV[i]}");
+            }
             return (2,2);
         }
 
-        
+        private double ComputeLHS(double[] cBV, double[,] Binv, double[] aj)
+        {
+            // Multiply Binv * aj
+            int n = aj.Length;
+            double[] temp = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < n; j++)
+                    sum += Binv[i, j] * aj[j];
+                temp[i] = sum;
+            }
+
+            // Dot product with cBV
+            double lhs = 0;
+            for (int i = 0; i < n; i++)
+                lhs += cBV[i] * temp[i];
+
+            return lhs;
+        }
+
+        private string deltaRangeNonBasicVariable(double lhs, double cj)
+        {
+            string rangeInfo = "";
+            if (lhs > 0)
+            {
+                double upperBound = lhs  -cj;
+                rangeInfo = $"Δ ≤ {-upperBound}";
+            }
+            else if (lhs < 0)
+            {
+                double lowerBound = lhs -cj;
+                rangeInfo = $"Δ ≥ {-lowerBound}";
+            }
+            else
+            {
+                rangeInfo = "Δ can take any value (unbounded)";
+            }
+            return rangeInfo;
+        }
+
+        private List<int> getBasicVarColumnIndex()
+        {// This method goescolumn by column to check if it is a basic variable
+            int rows = optimalTab.Tableau.GetLength(0);
+            int cols = optimalTab.Tableau.GetLength(1);
+            List<int> columns = new List<int>();
+            List<(int row, int col)> basicVarPositions = new List<(int row, int col)>();
+
+            for (int j = 0; j < cols - 1; j++) // Exclude RHS column
+            {
+                int countOnes = 0;
+                int oneRowIndex = -1;
+                bool isBasic = true;
+                for (int i = 1; i < rows; i++) // Exclude objective function row
+                {
+                    double cellValue = optimalTab.Tableau[i, j];
+                 if(cellValue ==1)
+                    {
+                        oneRowIndex = i;
+                        countOnes++;
+                    }
+                    else if(cellValue != 0)
+                    {
+                        isBasic = false;
+                        break; // No need to check further, not a basic variable
+                    }
+                }
+                if(isBasic && countOnes == 1)
+                {
+                    basicVarPositions.Add((oneRowIndex, j)); // Store the coefficient from the objective function row
+                }
+                
+            }
+            columns = basicVarPositions
+        .OrderBy(bv => bv.row)
+        .Select(bv => bv.col)
+        .ToList();
+
+            //returns the cbv of an optimal solution.
+            return columns;
+        }
+
+        private double[] getCbv()
+        {
+            List<int> basicColumnIndicies = getBasicVarColumnIndex();
+            double[] cbv = new double[basicColumnIndicies.Count];
+            for (int i = 0; i < basicColumnIndicies.Count; i++)
+            {
+                
+                int colIndex = basicColumnIndicies[i];
+                double value = originalTab.Tableau[0, colIndex];
+                cbv[i] = Math.Abs(value);
+            }
+            return cbv;
+        }
+
+
+
+
+
         private void range_Of_Basic_Variable(int columnIndex)
         {
             // should return the range of a basic variable

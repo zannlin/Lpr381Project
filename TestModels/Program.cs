@@ -16,18 +16,20 @@ class Program
 
         double[] rhs = model.RightHandSide;
         SimplexResult result = PrimalSimplex.Solve(constraint, rhs, objectiveFunction);
+        var optimalTableau = result.Tableaus.Last();
+        var originalTab = result.Tableaus[0];
 
-        CuttingPlaneSimplex cp = new CuttingPlaneSimplex(result);
-        cp.solveCuttingPlane();
+        //CuttingPlaneSimplex cp = new CuttingPlaneSimplex(result);
+        //cp.solveCuttingPlane();
         foreach (var item in result.Tableaus)
         {
           Console.WriteLine(item.ToString());
         }
         
         //Console.WriteLine(cp.cuttingPlaneResult.printTables());
-        var optimalTableau = result.Tableaus.Last();
-        MathematicalSensitivity ms = new MathematicalSensitivity(optimalTableau);
-        (double lower, double upper) = ms.Range_Of_NonBasic_Variable(12);
+        
+        MathematicalSensitivity ms = new MathematicalSensitivity(optimalTableau,originalTab);
+        (double lower, double upper) = ms.Range_Of_NonBasic_Variable(3);
         Console.WriteLine($"Range of Non-Basic Variable x3: Lower Bound = {lower}, Upper Bound = {upper}");
 
     }
