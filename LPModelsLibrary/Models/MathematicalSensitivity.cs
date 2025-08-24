@@ -145,7 +145,6 @@ namespace LPModelsLibrary.Models
             return 0;
         }
 
-
         public string Range_Of_NonBasic_Variable(int columnIndex)
         {
 
