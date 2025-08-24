@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using MathNet.Numerics.LinearAlgebra;
 namespace LPModelsLibrary.Models
 {
     public class MathematicalSensitivity
@@ -28,14 +28,57 @@ namespace LPModelsLibrary.Models
             Console.WriteLine("Optimal Tableau");
             Console.WriteLine(optimalTab.ToString());
             // Cj∗​=cBV​B−1aj​−(cj​+Δ) Formulate for non basic variable
-            double cj = originalTab.Tableau[0, columnIndex];
+            double cj = originalTab.Tableau[0, columnIndex]*-1;
             double[] cBV = getCbv();
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
+            for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+            {
+                aj[i - 1] = originalTab.Tableau[i, columnIndex];
+            }
+
+            double lhs = ComputeLHS(cBV, BInverse, aj) - cj;
+            string rangeInfo = deltaRangeNonBasicVariable(lhs, cj);
+
+            Console.WriteLine("CJ :");
+            Console.WriteLine($"c[{columnIndex}] = {cj}");
 
             Console.WriteLine("cBV:");
             for (int i = 0; i < cBV.Length; i++)
             {
                 Console.WriteLine($"cB[{i}] = {cBV[i]}");
             }
+
+            Console.WriteLine("B Matrix:");
+            double[,] B = constructBMatrix();
+            for (int i = 0; i < B.GetLength(0); i++)
+            {
+                for (int j = 0; j < B.GetLength(1); j++)
+                {
+                    Console.Write($"{B[i, j]} ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("B Inverse Matrix:");
+            for (int i = 0; i < BInverse.GetLength(0); i++)
+            {
+                for (int j = 0; j < BInverse.GetLength(1); j++)
+                {
+                    Console.Write($"{BInverse[i, j]} ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("aj:");
+            for (int i = 0; i < aj.Length; i++)
+            {
+                Console.WriteLine($"a[{i}] = {aj[i]}");
+            }
+
+            Console.WriteLine($"LHS (cBV * B^-1 * aj) = {lhs}");
+            Console.WriteLine($"Range Information: {rangeInfo}");
+
             return (2,2);
         }
 
@@ -65,13 +108,13 @@ namespace LPModelsLibrary.Models
             string rangeInfo = "";
             if (lhs > 0)
             {
-                double upperBound = lhs  -cj;
-                rangeInfo = $"Δ ≤ {-upperBound}";
+                double upperBound = lhs;
+                rangeInfo = $"Δ ≤ {upperBound}";
             }
             else if (lhs < 0)
             {
-                double lowerBound = lhs -cj;
-                rangeInfo = $"Δ ≥ {-lowerBound}";
+                double lowerBound = lhs;
+                rangeInfo = $"Δ ≥ {lowerBound}";
             }
             else
             {
@@ -133,6 +176,30 @@ namespace LPModelsLibrary.Models
                 cbv[i] = Math.Abs(value);
             }
             return cbv;
+        }
+
+        private double[,] constructBMatrix()
+        {
+             List<int> basicColumnIndicies = getBasicVarColumnIndex();
+            int numRows = originalTab.Tableau.GetLength(0) - 1; // Exclude objective function row
+            double[,] B = new double[numRows, basicColumnIndicies.Count];
+            for (int i = 0; i < numRows; i++)
+            {
+                for (int j = 0; j < basicColumnIndicies.Count; j++)
+                {
+                    B[i, j] = originalTab.Tableau[i+1, basicColumnIndicies[j]]; // +1 to skip objective function row
+                }
+            }
+            return B;
+        }
+
+        private double[,] InverseMatrix(double[,] matrixToInverse)
+        {
+
+            Matrix<double> matrix = Matrix<double>.Build.DenseOfArray(matrixToInverse);
+            
+return matrix.Inverse().ToArray();
+            
         }
 
 
