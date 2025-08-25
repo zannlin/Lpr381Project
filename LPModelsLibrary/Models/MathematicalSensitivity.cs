@@ -523,11 +523,50 @@ namespace LPModelsLibrary.Models
 
         }
 
-        private string display_shadow_Prices()
+        public string display_shadow_Prices()
         {
 
-            return "";
-            // should return the shadow prices of the constraints
+            string result = "Shadow Prices:\n";
+            result += "==============\n";
+
+            // Look for slack/surplus variables in the optimal tableau
+            bool foundAny = false;
+            int constraintNumber = 1;
+
+            for (int j = 0; j < optimalTab.ColHeaders.Length; j++)
+            {
+                string varName = optimalTab.ColHeaders[j];
+
+                // Check if it's a slack or surplus variable
+                if (varName.ToLower().StartsWith("s") || varName.ToLower().Contains("slack") ||
+                    varName.ToLower().Contains("surplus"))
+                {
+                    double shadowPrice = optimalTab.Tableau[0, j]; // Z-row value
+                    result += $"Constraint {constraintNumber} ({varName}): Shadow Price = {shadowPrice:F3}\n";
+
+                    
+                    if (Math.Abs(shadowPrice) < 1e-6) 
+                    {
+                        result += $"Constraint {constraintNumber} is not binding (has slack/surplus)\n";
+                    }
+                    else
+                    {
+                        result += $"Increasing RHS of constraint {constraintNumber} by 1 unit changes objective by {shadowPrice:F3}\n";
+                    }
+                    result += "\n";
+
+                    foundAny = true;
+                    constraintNumber++;
+                }
+            }
+
+            if (!foundAny)
+            {
+                result += "No slack/surplus variables found in the tableau.\n";
+            }
+
+            return result;
+
         }
 
         private TableauTemplate DualSimplex(TableauTemplate tab, double eps = 1e-9)
