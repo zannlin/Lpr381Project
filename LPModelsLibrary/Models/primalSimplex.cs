@@ -7,10 +7,10 @@ namespace LPModelsLibrary.Models
 {
     public class PrimalSimplex
     {
-        public static SimplexResult Solve(double[,] A, double[] b, double[] c, double eps = 1e-9)
+        public static SimplexResult Solve(double[,] A, double[] b, double[] c, bool isMaximization = true, double eps = 1e-9)
         {
-            int m = A.GetLength(0); 
-            int n = A.GetLength(1); 
+            int m = A.GetLength(0);
+            int n = A.GetLength(1);
 
             if (b.Any(x => x < -eps))
             {
@@ -21,21 +21,23 @@ namespace LPModelsLibrary.Models
                 };
             }
 
-            int cols = n + m + 1;   
-            int rows = m + 1;       
+            int cols = n + m + 1;
+            int rows = m + 1;
             double[,] T = new double[rows, cols];
 
-            
-            for (int j = 0; j < n; j++) T[0, j] = -c[j];
+            // For MAXIMIZATION: T[0, j] = -c[j] (we want negatives for entering variable test)
+            // For MINIMIZATION: T[0, j] = c[j] (we want positives, then check for positives to enter)
+            for (int j = 0; j < n; j++)
+            {
+                T[0, j] = isMaximization ? -c[j] : c[j];
+            }
 
-            
             for (int i = 0; i < m; i++)
             {
                 for (int j = 0; j < n; j++) T[i + 1, j] = A[i, j];
                 for (int j = 0; j < m; j++) T[i + 1, n + j] = i == j ? 1.0 : 0.0;
                 T[i + 1, cols - 1] = b[i];
             }
-
 
             // Column headers
             string[] colHeaders = new string[cols];
@@ -50,38 +52,83 @@ namespace LPModelsLibrary.Models
 
             var result = new SimplexResult();
             int iteration = 0;
-            result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, null, null, "Initial tableau"));
+            string problemType = isMaximization ? "MAX" : "MIN";
+            result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, null, null, $"Initial tableau ({problemType})"));
 
             while (true)
             {
                 iteration++;
 
-                // STEP 1: Choose pivot column (most negative in Z row, i.e., row 0)
+                
                 int pivotColumn = -1;
-                double mostNeg = -eps;
+                double bestValue = isMaximization ? -eps : eps; // For MAX: look for most negative, for MIN: look for most positive
+
                 for (int j = 0; j < cols - 1; j++)
                 {
-                    if (T[0, j] < mostNeg)
+                    if (isMaximization)
                     {
-                        mostNeg = T[0, j];
-                        pivotColumn = j;
+                        // Maximization: enter variable with most negative coefficient
+                        if (T[0, j] < bestValue)
+                        {
+                            bestValue = T[0, j];
+                            pivotColumn = j;
+                        }
+                    }
+                    else
+                    {
+                        // Minimization: enter variable with most positive coefficient
+                        if (T[0, j] > bestValue)
+                        {
+                            bestValue = T[0, j];
+                            pivotColumn = j;
+                        }
                     }
                 }
 
-                // No negative coefficients means  optimal
-                if (pivotColumn == -1)
+                // Check optimality condition
+                bool isOptimal = (pivotColumn == -1);
+                if (isOptimal)
                 {
                     var x = new double[n + m];
-                    
 
-                    result.OptimalValue = T[0, cols - 1];
+                    
+                    for (int i = 1; i < rows; i++)
+                    {
+                        // Find which variable is basic in this row (has coefficient 1 and others 0)
+                        for (int j = 0; j < cols - 1; j++)
+                        {
+                            bool isBasicInThisRow = Math.Abs(T[i, j] - 1.0) < eps;
+                            if (isBasicInThisRow)
+                            {
+                                // Check if this column has zeros elsewhere
+                                bool isBasicVariable = true;
+                                for (int k = 0; k < rows; k++)
+                                {
+                                    if (k != i && Math.Abs(T[k, j]) > eps)
+                                    {
+                                        isBasicVariable = false;
+                                        break;
+                                    }
+                                }
+                                if (isBasicVariable && j < n + m)
+                                {
+                                    x[j] = T[i, cols - 1];
+                                }
+                            }
+                        }
+                    }
+
+                    
+                    double objectiveValue = isMaximization ? T[0, cols - 1] : -T[0, cols - 1];
+
+                    result.OptimalValue = objectiveValue;
                     result.PrimalVariables = x.Take(n).ToArray();
-                    result.Message = "Optimal solution found.";
-                    result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, null, null, "Optimal tableau"));
+                    result.Message = $"Optimal solution found ({problemType}).";
+                    result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, null, null, $"Optimal tableau ({problemType})"));
                     break;
                 }
 
-                // STEP 2: Minimum ratio test we ignore row 0 since its the objective function row
+                
                 int pivotRow = -1;
                 double bestRatio = double.PositiveInfinity;
                 for (int i = 1; i < rows; i++)
@@ -90,7 +137,7 @@ namespace LPModelsLibrary.Models
                     if (aij > eps)
                     {
                         double ratio = T[i, cols - 1] / aij;
-                        if (ratio < bestRatio - 1e-15 || Math.Abs(ratio - bestRatio) <= 1e-15 && i < pivotRow)
+                        if (ratio < bestRatio - 1e-15 || (Math.Abs(ratio - bestRatio) <= 1e-15 && i < pivotRow))
                         {
                             bestRatio = ratio;
                             pivotRow = i;
@@ -101,19 +148,16 @@ namespace LPModelsLibrary.Models
                 if (pivotRow == -1)
                 {
                     result.IsUnbounded = true;
-                    result.Message = "Unbounded: no leaving variable found.";
-                    result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, null, pivotColumn, "Unbounded"));
+                    result.Message = $"Unbounded: no leaving variable found ({problemType}).";
+                    result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, null, pivotColumn, $"Unbounded ({problemType})"));
                     break;
                 }
 
-                // Pivot
+                
                 Pivot(T, pivotRow, pivotColumn, eps);
 
-                // Update basis (pivotRow - 1 because row 0 is Z)
                 
-
-                // Save tableau so we can display later
-                result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, pivotRow, pivotColumn));
+                result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration, pivotRow, pivotColumn, $"Iteration {iteration} ({problemType})"));
             }
 
             return result;

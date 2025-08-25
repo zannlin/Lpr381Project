@@ -9,6 +9,7 @@
         public double[] ObjectiveFuntion;
         public double[,] Constraints;
         public double[] RightHandSide;
+        public int objectiveFunctionCount;
 
         public LinearModel(string[] content)
         {
@@ -41,6 +42,7 @@
                 if (counter != 0)
                 {
                     DummyConstraint.Add(line);
+                    Console.WriteLine(line);
                 }
 
                 counter++;
@@ -52,8 +54,9 @@
         public void CreateObjectiveFunction()
         {
 
-            Console.WriteLine($"Objective Function Count {DummyObjectiveFunction.Count}:");
-            ObjectiveFuntion = new double[DummyObjectiveFunction.Count];
+            Console.WriteLine($"Objective Function Count {DummyObjectiveFunction.Count-1}:");
+            objectiveFunctionCount = DummyObjectiveFunction.Count - 1; // we say minus 1 because we dont want to include "max" as part of the count
+            ObjectiveFuntion = new double[DummyObjectiveFunction.Count-1];
             DummyObjectiveFunction.RemoveAt(0);
 
 
@@ -76,7 +79,7 @@
             problem_ineqaulity = DummyConstraint[DummyConstraint.Count - 1].Split(' ')[0];
             DummyConstraint.RemoveAt(DummyConstraint.Count - 1); // Remove the last element which is the inequality constraint
             int numberOfConstraints = DummyConstraint.Count;
-            Constraints = new double[numberOfConstraints, ObjectiveFuntion.Length - 1];
+            Constraints = new double[numberOfConstraints, ObjectiveFuntion.Length];
             int counter = 0;
             RightHandSide = new double[numberOfConstraints];
 
@@ -93,6 +96,7 @@
                     {
 
                         Constraints[counter, i] = value;
+                        Console.WriteLine(value);
                     }
                     else
                     {
@@ -103,6 +107,7 @@
                 Console.WriteLine($"Right Hand Side {parts[parts.Length - 1]}");
                 if (double.TryParse(parts[parts.Length - 1].Substring(2), out double rhsValue))
                 {
+                   
                     RightHandSide[counter] = rhsValue;
                 }
                 else
