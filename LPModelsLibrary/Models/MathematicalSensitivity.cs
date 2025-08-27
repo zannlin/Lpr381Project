@@ -140,10 +140,16 @@ namespace LPModelsLibrary.Models
             
         }
 
-        private double computeRHSValue(double cbv,double BInverse)
+        private double[] computeSmallB()
         {
-            return 0;
+            double[] rhsColumn = new double[originalTab.Tableau.GetLength(0)-1];
+            for(int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+            {
+                rhsColumn[i-1] = originalTab.Tableau[i, originalTab.Tableau.GetLength(1) - 1];
+            }
+            return rhsColumn;
         }
+        
 
         public string Range_Of_NonBasic_Variable(int columnIndex)
         {
@@ -228,83 +234,122 @@ namespace LPModelsLibrary.Models
             return orignalRange + "\n" + middle + "\n" + rangeInfo;
         }
 
-        public string range_Of_Basic_Variable(int columnIndex)
+        public (string,string) range_Of_Basic_Variable(int columnIndex)
         {
-            double lhs  = 1;
-            bool upperBoundFound  = false;
-            bool lowerBoundFound  = false;
-            double lower  =  -999, upper = 999;
-            int gaurdMax = 1000;
-            int gaurd = 0;
+            
+            double[] cBV = getCbv();
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            List<int> basicColumnIndices = getBasicVarColumnIndex();
+            double Coefficient = Math.Abs(originalTab.Tableau[0, columnIndex]);
             double increment = 0.1;
-            double oldValue = Math.Abs(originalTab.Tableau[0, columnIndex]);
+            string upperRange = "Has an infinite higher range";
+            string lowerRange = "Has an infinite lower range";
+            bool flag = false;
+            double gaurdMax = 1000/increment;
+            double gaurd = 0;
 
-            while (!lowerBoundFound)
+            while (!flag && gaurd <= gaurdMax)
             {
-
-                double newValue = oldValue - increment;
-                Console.WriteLine($"Trying new value: {newValue}");
-                double cj = newValue;
-                double[] cBV = getCbv();
+                Coefficient -= increment;
+                // we need to change the cbv here
                 for (int i = 0; i < cBV.Length; i++)
                 {
-                    if (cBV[i] == Math.Abs(oldValue))
+                    if (basicColumnIndices[i] == columnIndex)
                     {
-                        cBV[i] = Math.Abs(newValue);
+                        cBV[i] = Math.Abs(Coefficient);
+                        Console.WriteLine($"Updated CBV[{i}] to {cBV[i]} (was {getCbv()[i]})");
                         break;
                     }
-                    
                 }
 
-                double[,] BInverse = InverseMatrix(constructBMatrix());
-                double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
-                for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+                double[] newZrow = computeNewZRow(cBV, BInverse);
+                
+                for (int j = 0; j < newZrow.Length - 1; j++) // Exclude RHS column
                 {
-                    aj[i - 1] = originalTab.Tableau[i, columnIndex];
-                }
-                double lhsNew = ComputeLHS(cBV, BInverse, aj) - cj;
-                if (lhsNew <= 0)
-                {
-                    lower = newValue;
-                    lowerBoundFound = true;
-                }
-                ; 
-                increment += increment;
-               
+                    // since we arent updating the value of the basic varibable cj when computing the  new z-row values we neeed to skip it when checking ( math wise it will always stay 0 but since we arent also updating it cj to make the new incremenet it causes bugs. )
+                    if (newZrow[j] < 0 && j != columnIndex)
+                    {
 
-                if(lhs<= 0)
-                {
-                    lower = newValue;
-                    break;
+                        double range = Math.Abs(originalTab.Tableau[0, columnIndex]) - (Coefficient);
+                       lowerRange = ($"Allowabe  decrease {range}");
+                        flag = true;
+                        
+                    }
+                    Console.Write($"Z Row Value at index {j}: {newZrow[j]}\n");
                 }
+                Console.WriteLine($"Coefficient after increment: {Coefficient}");
+                gaurd++;   
+            }
+            
+            while (!flag && gaurd <= gaurdMax)
+            {
+                Coefficient += increment;
+                // we need to change the cbv here
+                for (int i = 0; i < cBV.Length; i++)
+                {
+                    if (basicColumnIndices[i] == columnIndex)
+                    {
+                        cBV[i] = Math.Abs(Coefficient);
+                        Console.WriteLine($"Updated CBV[{i}] to {cBV[i]} (was {getCbv()[i]})");
+                        break;
+                    }
+                }
+
+                double[] newZrow = computeNewZRow(cBV, BInverse);
+
+                for (int j = 0; j < newZrow.Length - 1; j++) // Exclude RHS column
+                {
+                    // since we arent updating the value of the basic varibable cj when computing the  new z-row values we neeed to skip it when checking ( math wise it will always stay 0 but since we arent also updating it cj to make the new incremenet it causes bugs. )
+                    if (newZrow[j] < 0 && j != columnIndex)
+                    {
+
+                        double range = Math.Abs(originalTab.Tableau[0, columnIndex]) - (Coefficient);
+                        upperRange = ($"Allowabe increase of  {range}");
+                        flag = true;
+
+                    }
+                    Console.Write($"Z Row Value at index {j}: {newZrow[j]}\n");
+                }
+                Console.WriteLine($"Coefficient after increment: {Coefficient}");
+                gaurd++;
             }
 
-           
-            double lowerRange = lowerBoundFound ? lower - oldValue : 0;
-            string rangeInfo = "";
-
-           
-        
-            
-             rangeInfo = $"{optimalTab.ColHeaders[columnIndex]}  is greater than {lowerRange}";
-            
-           
-            
-            return rangeInfo;
+            return (upperRange,lowerRange);
 
         }
 
-        public double change_Basic_Variable_Coefficient(int columnIndex, double newCoefficient)
+        private double [] computeNewZRow(double[] cBV, double[,] BInverse)
+        {
+            double[] newZrow = new double[optimalTab.Tableau.GetLength(1)];
+            int cols = originalTab.Tableau.GetLength(1);    
+
+            for(int j =0;j<cols-1;j++) // Exclude RHS column
+            {
+                double  cj = Math.Abs(originalTab.Tableau[0, j]);
+                double[] aj = new double[originalTab.Tableau.GetLength(0) - 1];
+                for (int i = 1; i < originalTab.Tableau.GetLength(0); i++)
+                {
+                    aj[i - 1] = originalTab.Tableau[i, j];
+                }
+                double lhs = ComputeLHS(cBV, BInverse, aj);
+                newZrow[j] = lhs-cj;
+            }
+
+            return newZrow;
+        }
+
+        public double[] change_Basic_Variable_Coefficient(int columnIndex, double newCoefficient)
         {
             // The reason this isnt working is because when changing the cbv we need to see the changes for all thevalues in the z row not  just the one we are changing
             // Those values will change as well, so we need to recalculate the entire z row.
+
             double cj = newCoefficient;
             double[] cBV = getCbv();
             double oldValue = originalTab.Tableau[0, columnIndex];
             List<int> basicColumnIndices = getBasicVarColumnIndex();
             // we need to change the cbv here
 
-
+            // Creates the new CBV we'll be using to calculate the new optimal value for each Z - row value.
             for (int i = 0; i < cBV.Length; i++)
             {
                 if (basicColumnIndices[i]  == columnIndex)
@@ -321,64 +366,207 @@ namespace LPModelsLibrary.Models
                 aj[i-1] = originalTab.Tableau[i, columnIndex];
             }
 
-            for( int  i =  0; i < cBV.Length; i++)
+
+            double[] newZrow = computeNewZRow(cBV, BInverse);
+            newZrow[columnIndex] = 0;
+            
+            return newZrow;
+
+        }
+
+        public (string, string) range_RightHandSide(int rowIndex)
+        {
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            double[] smallB = computeSmallB();
+            double increment = 0.1;
+            string upperRange = "Has an infinite higher range";
+            string lowerRange = "Has an infinite lower range";
+            bool flag = false;
+            double gaurdMax = 1000 / increment;
+            double gaurd = 0;
+            double currentRhs = originalTab.Tableau[rowIndex, originalTab.Tableau.GetLength(1) - 1];
+
+            while (!flag && gaurd <= gaurdMax)
             {
-                Console.WriteLine($"cB[{i}] = {cBV[i]}");
+                currentRhs -= increment;
+
+                for (int i = 0; i < smallB.Length; i++)
+                {
+                    if (i == rowIndex - 1)
+                    {
+                        smallB[i] = currentRhs;
+                        break;
+                    }
+                }
+
+
+                double[] bOptimal = new double[BInverse.GetLength(1)];
+                for (int i = 0; i < BInverse.GetLength(0); i++)
+                {
+                    double sum = 0;
+                    for (int j = 0; j < BInverse.GetLength(1); j++)
+                    {
+                        sum += BInverse[i, j] * smallB[j];
+                    }
+                    bOptimal[i] = sum;
+                }
+
+                for (int j = 0; j < bOptimal.Length; j++)
+                {
+                    if(bOptimal[j] < 0)
+                    {
+                        double range = originalTab.Tableau[rowIndex, originalTab.Tableau.GetLength(1) - 1] - (currentRhs);
+                        lowerRange = ($"Allowabe  decrease {range}");
+                        flag = true;
+                    }
+                    
+                }
+
+                gaurd++;
+            }
+            gaurdMax = 1000 / increment;
+            while (!flag && gaurd <= gaurdMax)
+            {
+                currentRhs += increment;
+
+                for (int i = 0; i < smallB.Length; i++)
+                {
+                    if (i == rowIndex - 1)
+                    {
+                        smallB[i] = currentRhs;
+                        break;
+                    }
+                }
+
+
+                double[] bOptimal = new double[BInverse.GetLength(1)];
+                for (int i = 0; i < BInverse.GetLength(0); i++)
+                {
+                    double sum = 0;
+                    for (int j = 0; j < BInverse.GetLength(1); j++)
+                    {
+                        sum += BInverse[i, j] * smallB[j];
+                    }
+                    bOptimal[i] = sum;
+                }
+
+                for (int j = 0; j < bOptimal.Length; j++)
+                {
+                    if (bOptimal[j] < 0)
+                    {
+                        double range = originalTab.Tableau[rowIndex, originalTab.Tableau.GetLength(1) - 1] - (currentRhs);
+                        upperRange = ($"Allowabe  increase {range}");
+                        flag = true;
+                    }
+
+                }
+
+                gaurd++;
+            }
+           return (lowerRange,upperRange);
+        }   
+
+        public (double[],double) change_RightHandSide(int rowIndex, double newValue)
+        {
+            double[] cbv = getCbv();
+            double[,] BInverse = InverseMatrix(constructBMatrix());
+            double[] smallB = computeSmallB();
+            double newRhs = newValue;
+
+            for (int i = 0; i < smallB.Length; i++)
+            {
+                if (i == rowIndex - 1)
+                {
+                    smallB[i] = newRhs;
+                    break;
+                }
             }
 
-            Console.WriteLine("B Inverse Matrix:");
+            double[] bOptimal = new double[BInverse.GetLength(1)];
             for (int i = 0; i < BInverse.GetLength(0); i++)
             {
+                double sum = 0;
                 for (int j = 0; j < BInverse.GetLength(1); j++)
                 {
-                    Console.Write($"{BInverse[i, j]} ");
+                    sum += BInverse[i, j] * smallB[j];
                 }
-                Console.WriteLine();
+                bOptimal[i] = sum;
             }
 
-            Console.WriteLine("aj:");
-            for (int i = 0; i < aj.Length; i++)
+            double optimalValue = 0;
+            for (int i = 0; i < cbv.Length; i++)
             {
-                Console.WriteLine($"a[{i}] = {aj[i]}");
+                optimalValue += cbv[i] * bOptimal[i];
             }
-
-
-
-
-            double lhs = ComputeLHS(cBV, BInverse, aj)  - cj;
-            string orignalInfo = "The original optimal value is for this variable was: " + optimalTab.Tableau[0, columnIndex];
-            string middle = $"Changing the variable from {Math.Abs(oldValue)} to {newCoefficient} ";
-            string rangeInfo = $"The new optimal value for {optimalTab.ColHeaders[columnIndex]} is {lhs}";
-
-            Console.WriteLine(orignalInfo + "\n" + middle +  "\n" + rangeInfo);
-            return lhs;
-
-        }
-
-        private void range_RightHandSide(int rowIndex)
-        {
-            
-        }
-
-        private void change_RightHandSide(int rowIndex, double newValue)
-        {
-            // should return the new optimal solution after changing the right hand side value of a constraint
+            return (bOptimal,optimalValue);
         }
 
         private void add_column(double[] newColumn, string columnName, double newCoefficient)
         {
-            // should return the new optimal solution after adding a new variable to the model
-        }   
+            // Need to talk to reggie about this one
+        }
+
         private void add_row(double[] newRow, string rowName, double newRHS)
         {
             // should return the new optimal solution after adding a new constraint to the model
+            double[,] newTable = new double[optimalTab.Tableau.GetLength(0) + 1, optimalTab.Tableau.GetLength(1) + 1];
+            for(int i =0;i< optimalTab.Tableau.GetLength(0);i++)
+            {
+                for(int j =0;j< optimalTab.Tableau.GetLength(1);j++)
+                {
+                    newTable[i, j] = optimalTab.Tableau[i, j];
+                }
+                // need to talk to reggie
+            }
+
+
+
         }
 
-        private string display_shadow_Prices()
+        public string display_shadow_Prices()
         {
 
-            return "";
-            // should return the shadow prices of the constraints
+            string result = "Shadow Prices:\n";
+            result += "==============\n";
+
+            // Look for slack/surplus variables in the optimal tableau
+            bool foundAny = false;
+            int constraintNumber = 1;
+
+            for (int j = 0; j < optimalTab.ColHeaders.Length; j++)
+            {
+                string varName = optimalTab.ColHeaders[j];
+
+                // Check if it's a slack or surplus variable
+                if (varName.ToLower().StartsWith("s") || varName.ToLower().Contains("slack") ||
+                    varName.ToLower().Contains("surplus"))
+                {
+                    double shadowPrice = optimalTab.Tableau[0, j]; // Z-row value
+                    result += $"Constraint {constraintNumber} ({varName}): Shadow Price = {shadowPrice:F3}\n";
+
+                    
+                    if (Math.Abs(shadowPrice) < 1e-6) 
+                    {
+                        result += $"Constraint {constraintNumber} is not binding (has slack/surplus)\n";
+                    }
+                    else
+                    {
+                        result += $"Increasing RHS of constraint {constraintNumber} by 1 unit changes objective by {shadowPrice:F3}\n";
+                    }
+                    result += "\n";
+
+                    foundAny = true;
+                    constraintNumber++;
+                }
+            }
+
+            if (!foundAny)
+            {
+                result += "No slack/surplus variables found in the tableau.\n";
+            }
+
+            return result;
+
         }
 
         private TableauTemplate DualSimplex(TableauTemplate tab, double eps = 1e-9)
