@@ -213,7 +213,6 @@ namespace LPModelsLibrary.Models
             return rangeInfo;
         }
 
-
         public string change_nonBasic_Variable_Coefficient(int columnIndex, double newCoefficient)
         {
             double cj = newCoefficient;

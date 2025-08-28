@@ -191,5 +191,6 @@ namespace LPModelsLibrary.Models
                 for (int j = 0; j < n; j++)
                     if (Math.Abs(T[i, j]) < eps) T[i, j] = 0.0;
         }
+
     }
 }

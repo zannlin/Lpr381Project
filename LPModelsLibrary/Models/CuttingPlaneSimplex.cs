@@ -58,7 +58,7 @@
             }
         }
 
-        private TableauTemplate DualSimplex(TableauTemplate tab, double eps = 1e-9)
+        public TableauTemplate DualSimplex(TableauTemplate tab, double eps = 1e-9)
         {
 
             int m = tab.Tableau.GetLength(0);
