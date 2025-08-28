@@ -74,6 +74,49 @@ namespace MainForm
             richTextBoxOptimal.Clear();
             richTextBoxOptimal.AppendText(summary);
         }
+        private void DisplayRevisedSimplexResults(SimplexResult result)
+        {
+            // 1) Canonical: summarize the input
+            richTextBoxCanonical.Clear();
+            richTextBoxCanonical.AppendText("Linear Programming Problem (parsed from input):\n");
+            richTextBoxCanonical.AppendText($"Objective Function: {string.Join(" + ", result.PrimalVariables.Select((v, i) => $"x{i + 1}={v:0.###}"))}\n");
+            richTextBoxCanonical.AppendText($"Constraints: Not fully displayed (see tableau for details)\n"); // Placeholder, expand if needed
+
+            // 2) Tableau: display all tableau iterations
+            richTextBoxTableau.Clear();
+            foreach (var tableau in result.Tableaus)
+            {
+                richTextBoxTableau.AppendText(tableau.ToString());
+                richTextBoxTableau.AppendText("\n\n");
+            }
+
+            // 3) Optimal: extract the top summary block (until first tableau row or error)
+            string fullTableauText = string.Join("\n", result.Tableaus.Select(t => t.ToString()));
+            var lines = fullTableauText
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+            int splitIdx = lines.FindIndex(l => l.StartsWith("---", StringComparison.Ordinal) || // Tableau separator
+                                              l.StartsWith("Error:", StringComparison.OrdinalIgnoreCase));
+
+            string summary;
+            if (splitIdx == -1 || splitIdx == 0)
+            {
+                // If no separator or only one line, show full output
+                summary = string.Join(Environment.NewLine, lines);
+            }
+            else
+            {
+                summary = string.Join(Environment.NewLine, lines.Take(splitIdx));
+            }
+
+            richTextBoxOptimal.Clear();
+            richTextBoxOptimal.AppendText(summary);
+            if (!string.IsNullOrEmpty(result.Message))
+            {
+                richTextBoxOptimal.AppendText($"\nMessage: {result.Message}");
+            }
+        }
 
         private void DisplayBranchAndBoundResults(BranchAndBoundResult result)
         {
@@ -128,7 +171,48 @@ namespace MainForm
 
         private void revisedSimplexToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            try
+            {
+                // Get content from the Input textbox
+                string[] inputLines = textBoxInput.Lines;
 
+                // Parse LP from file content
+                var model = new LinearModel(inputLines);
+
+                // Solve with Revised Primal Simplex
+                var result = RevisedPrimalSimplex.Solve(
+                    model.Constraints,
+                    model.RightHandSide,
+                    model.ObjectiveFuntion
+                );
+
+                // Console check to verify output
+                Console.WriteLine("=== Revised Primal Simplex Debug Output ===");
+                Console.WriteLine($"Optimal Value: {result.OptimalValue:0.###}");
+                Console.WriteLine("Primal Variables:");
+                for (int i = 0; i < result.PrimalVariables.Length; i++)
+                {
+                    Console.WriteLine($"x{i + 1} = {result.PrimalVariables[i]:0.###}");
+                }
+                Console.WriteLine("Tableau Count: " + result.Tableaus.Count);
+                if (result.Tableaus.Any())
+                {
+                    Console.WriteLine("First Tableau Sample:");
+                    Console.WriteLine(result.Tableaus[0].ToString());
+                }
+                Console.WriteLine($"Message: {result.Message}");
+                Console.WriteLine($"Is Infeasible: {result.IsInfeasible}");
+                Console.WriteLine($"Is Unbounded: {result.IsUnbounded}");
+                Console.WriteLine("==========================================");
+
+                // Display results
+                DisplayResults(result);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                Console.WriteLine("Error: " + ex.Message);
+            }
         }
 
         private void primalSimplexToolStripMenuItem_Click(object sender, EventArgs e)
