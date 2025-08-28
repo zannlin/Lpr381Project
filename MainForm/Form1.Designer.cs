@@ -35,8 +35,8 @@
             solveToolStripMenuItem = new ToolStripMenuItem();
             primalSimplexToolStripMenuItem = new ToolStripMenuItem();
             revisedPrimalSimplexToolStripMenuItem = new ToolStripMenuItem();
-            branchAndBoundToolStripMenuItem = new ToolStripMenuItem();
             cuttingPlaneToolStripMenuItem = new ToolStripMenuItem();
+            branchAndBoundToolStripMenuItem = new ToolStripMenuItem();
             knapsackToolStripMenuItem = new ToolStripMenuItem();
             sensitivityAnalysisToolStripMenuItem = new ToolStripMenuItem();
             rangeOfNonBasicVariablesToolStripMenuItem = new ToolStripMenuItem();
@@ -99,7 +99,7 @@
             loadInputFileToolStripMenuItem.BackColor = Color.DarkSlateGray;
             loadInputFileToolStripMenuItem.ForeColor = SystemColors.Control;
             loadInputFileToolStripMenuItem.Name = "loadInputFileToolStripMenuItem";
-            loadInputFileToolStripMenuItem.Size = new Size(224, 26);
+            loadInputFileToolStripMenuItem.Size = new Size(212, 26);
             loadInputFileToolStripMenuItem.Text = "Load Input File";
             loadInputFileToolStripMenuItem.Click += loadInputFileToolStripMenuItem_Click;
             // 
@@ -108,14 +108,14 @@
             exportOutputFileToolStripMenuItem.BackColor = Color.DarkSlateGray;
             exportOutputFileToolStripMenuItem.ForeColor = SystemColors.Control;
             exportOutputFileToolStripMenuItem.Name = "exportOutputFileToolStripMenuItem";
-            exportOutputFileToolStripMenuItem.Size = new Size(224, 26);
+            exportOutputFileToolStripMenuItem.Size = new Size(212, 26);
             exportOutputFileToolStripMenuItem.Text = "Export Output File";
             exportOutputFileToolStripMenuItem.Click += exportOutputFileToolStripMenuItem_Click;
             // 
             // solveToolStripMenuItem
             // 
             solveToolStripMenuItem.BackColor = Color.SpringGreen;
-            solveToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { primalSimplexToolStripMenuItem, revisedPrimalSimplexToolStripMenuItem, branchAndBoundToolStripMenuItem, cuttingPlaneToolStripMenuItem, knapsackToolStripMenuItem });
+            solveToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { primalSimplexToolStripMenuItem, revisedPrimalSimplexToolStripMenuItem, cuttingPlaneToolStripMenuItem, branchAndBoundToolStripMenuItem, knapsackToolStripMenuItem });
             solveToolStripMenuItem.Name = "solveToolStripMenuItem";
             solveToolStripMenuItem.Size = new Size(59, 24);
             solveToolStripMenuItem.Text = "Solve";
@@ -137,23 +137,26 @@
             revisedPrimalSimplexToolStripMenuItem.Size = new Size(246, 26);
             revisedPrimalSimplexToolStripMenuItem.Text = "Revised Primal Simplex";
             // 
-            // branchAndBoundToolStripMenuItem
-            // 
-            branchAndBoundToolStripMenuItem.Name = "branchAndBoundToolStripMenuItem";
-            branchAndBoundToolStripMenuItem.Size = new Size(246, 26);
-            branchAndBoundToolStripMenuItem.Text = "Branch and Bound";
-            // 
             // cuttingPlaneToolStripMenuItem
             // 
             cuttingPlaneToolStripMenuItem.Name = "cuttingPlaneToolStripMenuItem";
             cuttingPlaneToolStripMenuItem.Size = new Size(246, 26);
             cuttingPlaneToolStripMenuItem.Text = "Cutting Plane";
+            cuttingPlaneToolStripMenuItem.Click += cuttingPlaneToolStripMenuItem_Click;
+            // 
+            // branchAndBoundToolStripMenuItem
+            // 
+            branchAndBoundToolStripMenuItem.Name = "branchAndBoundToolStripMenuItem";
+            branchAndBoundToolStripMenuItem.Size = new Size(246, 26);
+            branchAndBoundToolStripMenuItem.Text = "Branch and Bound";
+            branchAndBoundToolStripMenuItem.Click += branchAndBoundToolStripMenuItem_Click;
             // 
             // knapsackToolStripMenuItem
             // 
             knapsackToolStripMenuItem.Name = "knapsackToolStripMenuItem";
             knapsackToolStripMenuItem.Size = new Size(246, 26);
             knapsackToolStripMenuItem.Text = "Knapsack";
+            knapsackToolStripMenuItem.Click += knapsackToolStripMenuItem_Click;
             // 
             // sensitivityAnalysisToolStripMenuItem
             // 
