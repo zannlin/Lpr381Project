@@ -1,9 +1,13 @@
-﻿using System;
+﻿using MathNet.Numerics.LinearAlgebra;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
-using MathNet.Numerics.LinearAlgebra;
+using System;
+using NCalc;
+using Expression = NCalc.Expression;
 namespace LPModelsLibrary.Models
 {
     public class MathematicalSensitivity
@@ -672,8 +676,60 @@ namespace LPModelsLibrary.Models
 
 
 
+    public double GoldenSectionSearch(string expression, double xlo, double xhi, double tolerance = 1e-6)
+    {
+        const double GoldenRatio = 0.6180339887498949; // (3 - sqrt(5)) / 2
 
+        if (xlo >= xhi)
+            throw new ArgumentException("xlo must be less than xhi");
 
+        try
+        {
+            double x1 = xhi - GoldenRatio * (xhi - xlo);
+            double x2 = xlo + GoldenRatio * (xhi - xlo);
 
+            var expr1 = new Expression(expression);
+            expr1.Parameters["x"] = x1;
+            double f1 = Convert.ToDouble(expr1.Evaluate());
+
+            var expr2 = new Expression(expression);
+            expr2.Parameters["x"] = x2;
+            double f2 = Convert.ToDouble(expr2.Evaluate());
+
+            while ((xhi - xlo) > tolerance)
+            {
+                if (f1 <= f2)
+                {
+                    xhi = x2;
+                    x2 = x1;
+                    f2 = f1;
+                    x1 = xhi - GoldenRatio * (xhi - xlo);
+                    expr1.Parameters["x"] = x1;
+                    f1 = Convert.ToDouble(expr1.Evaluate());
+                }
+                else
+                {
+                    xlo = x1;
+                    x1 = x2;
+                    f1 = f2;
+                    x2 = xlo + GoldenRatio * (xhi - xlo);
+                    expr2.Parameters["x"] = x2;
+                    f2 = Convert.ToDouble(expr2.Evaluate());
+                }
+            }
+
+            return (xlo + xhi) / 2;
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException($"Invalid expression: {expression}. Error: {ex.Message}");
+        }
     }
+
+
+
+
+
+
+}
 }
