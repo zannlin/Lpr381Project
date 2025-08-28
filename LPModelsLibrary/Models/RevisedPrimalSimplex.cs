@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LPModelsLibrary.Models;
 
 namespace LPModelsLibrary.Models
 {
@@ -45,165 +44,186 @@ namespace LPModelsLibrary.Models
             var result = new SimplexResult();
             int iteration = 0;
 
-            // Build initial tableau for T-1
+            // Build initial tableau for display
             double[,] initialT = BuildInitialTableau(A, b, c, m, n, eps);
-            result.Tableaus.Add(new TableauTemplate(initialT, colHeaders, rowHeaders, iteration + 1, null, null, $"T-{iteration + 1}"));
-
-            StringBuilder output = new StringBuilder();
-            output.AppendLine("===");
-            output.AppendLine($"Iteration {iteration + 1} | T-{iteration + 1}");
-            output.AppendLine(FormatTableau(initialT, rowHeaders, colHeaders));
-            output.AppendLine(FormatIteration(B_inv, c, basis, n, m, x_B, A, b, rowHeaders, colHeaders, eps));
+            result.Tableaus.Add(new TableauTemplate(initialT, colHeaders, rowHeaders, iteration, null, null, "Initial tableau"));
 
             while (true)
             {
-                iteration++;
+                // Compute reduced costs
+                double[] reducedCosts = new double[n + m];
+                int pivotCol = -1;
+                double minReducedCost = 0;
 
-                // Compute pi = c_B * B_inv
-                double[] c_B = new double[m];
-                for (int i = 0; i < m; i++)
-                {
-                    int var = basis[i];
-                    c_B[i] = var < n ? c[var] : 0;
-                }
-                double[] pi = new double[m];
-                for (int i = 0; i < m; i++)
-                {
-                    pi[i] = Dot(c_B, GetColumn(B_inv, i));
-                }
-
-                // Find entering variable
-                int? pivotColumn = null;
-                double mostNeg = -eps;
                 for (int j = 0; j < n + m; j++)
                 {
                     if (basis.Contains(j)) continue;
-                    double reduced_cost = 0;
+
+                    double[] a_j = GetColumn(A, j, m, n);
+                    double[] B_inv_a_j = MultiplyMatrixVector(B_inv, a_j);
+
+                    double c_B_dot_B_inv_a_j = 0;
                     for (int i = 0; i < m; i++)
                     {
-                        double a_ij = j < n ? A[i, j] : (j - n == i ? 1.0 : 0.0);
-                        reduced_cost += pi[i] * a_ij;
+                        double c_B_i = (basis[i] < n) ? c[basis[i]] : 0.0;
+                        c_B_dot_B_inv_a_j += c_B_i * B_inv_a_j[i];
                     }
-                    reduced_cost -= j < n ? c[j] : 0;
-                    if (reduced_cost < mostNeg)
+
+                    reducedCosts[j] = ((j < n) ? c[j] : 0.0) - c_B_dot_B_inv_a_j;
+
+                    if (reducedCosts[j] < minReducedCost - eps)
                     {
-                        mostNeg = reduced_cost;
-                        pivotColumn = j;
+                        minReducedCost = reducedCosts[j];
+                        pivotCol = j;
                     }
                 }
 
-                if (pivotColumn == null)
+                if (pivotCol == -1) // Optimal
                 {
-                    double optimalValue = Dot(c_B, x_B);
-                    double[] x = new double[n + m];
-                    for (int i = 0; i < m; i++) x[basis[i]] = x_B[i];
+                    // Compute optimal value
+                    result.OptimalValue = DotProduct(GetCB(c, basis, n, m), x_B);
 
-                    result.OptimalValue = optimalValue;
-                    result.PrimalVariables = x.Take(n).ToArray();
+                    // Primal variables
+                    result.PrimalVariables = new double[n];
+                    result.SlackExcessVariables = new double[m];
+                    for (int i = 0; i < m; i++)
+                    {
+                        int basicVar = basis[i];
+                        if (basicVar < n)
+                            result.PrimalVariables[basicVar] = x_B[i];
+                        else
+                            result.SlackExcessVariables[basicVar - n] = x_B[i];
+                    }
+
+                    // Final tableau
+                    double[,] finalT = BuildTableau(A, b, c, B_inv, basis, x_B, m, n, eps);
+                    result.Tableaus.Add(new TableauTemplate(finalT, colHeaders, rowHeaders, iteration, null, null, "Optimal tableau"));
+
                     result.Message = "Optimal solution found.";
-
-                    double[,] finalT = BuildFinalTableau(A, b, c, m, n, basis, B_inv, pi, eps);
-                    result.Tableaus.Add(new TableauTemplate(finalT, colHeaders, rowHeaders, iteration + 1, null, null, "T-*"));
-                    output.AppendLine("===");
-                    output.AppendLine($"Iteration {iteration + 1} | T-*");
-                    output.AppendLine(FormatTableau(finalT, rowHeaders, colHeaders));
-                    output.AppendLine(FormatIteration(B_inv, c, basis, n, m, x_B, A, b, rowHeaders, colHeaders, eps));
-                    output.AppendLine($"Optimal Value: {optimalValue:F3}");
-                    result.Message = output.ToString();
                     break;
                 }
 
-                // Compute u = B_inv * a_pivot
-                double[] u = new double[m];
-                for (int i = 0; i < m; i++)
-                {
-                    u[i] = Dot(GetColumn(B_inv, i), GetColumn(A, pivotColumn.Value, n, m));
-                }
+                // Compute a_hat = B_inv * a_pivot
+                double[] a_pivot = GetColumn(A, pivotCol, m, n);
+                double[] a_hat = MultiplyMatrixVector(B_inv, a_pivot);
 
-                // Minimum ratio test
-                int? pivotRow = null;
-                double bestRatio = double.PositiveInfinity;
+                // Find pivot row
+                int pivotRow = -1;
+                double minRatio = double.PositiveInfinity;
+
                 for (int i = 0; i < m; i++)
                 {
-                    if (u[i] > eps)
+                    if (a_hat[i] > eps)
                     {
-                        double ratio = x_B[i] / u[i];
-                        if (ratio < bestRatio - 1e-15 || (Math.Abs(ratio - bestRatio) <= 1e-15 && i < pivotRow))
+                        double ratio = x_B[i] / a_hat[i];
+                        if (ratio < minRatio - eps)
                         {
-                            bestRatio = ratio;
+                            minRatio = ratio;
                             pivotRow = i;
                         }
                     }
                 }
 
-                if (pivotRow == null)
+                if (pivotRow == -1)
                 {
                     result.IsUnbounded = true;
-                    result.Message = "Unbounded: no leaving variable found.";
-                    result.Tableaus.Add(new TableauTemplate(new double[m + 1, n + m + 1], colHeaders, rowHeaders, iteration + 1, null, pivotColumn, "Unbounded"));
-                    output.AppendLine("===");
-                    output.AppendLine($"Iteration {iteration + 1} | Unbounded");
-                    output.AppendLine(FormatIteration(B_inv, c, basis, n, m, x_B, A, b, rowHeaders, colHeaders, eps));
-                    result.Message = output.ToString();
+                    result.Message = "Unbounded: no positive a_hat entries.";
+                    result.Tableaus.Add(new TableauTemplate(initialT, colHeaders, rowHeaders, iteration, null, pivotCol, "Unbounded"));
                     break;
                 }
 
-                // Update x_B
-                for (int i = 0; i < m; i++)
-                {
-                    if (i == pivotRow) continue;
-                    x_B[i] -= bestRatio * u[i];
-                }
-                x_B[pivotRow.Value] = bestRatio;
-
                 // Update basis
-                basis[pivotRow.Value] = pivotColumn.Value;
+                basis[pivotRow] = pivotCol;
 
-                // Update rowHeaders
-                rowHeaders[pivotRow.Value] = colHeaders[pivotColumn.Value];
-
-                // Update B_inv
-                double u_pivot = u[pivotRow.Value];
+                // Update x_B
+                x_B[pivotRow] = minRatio;
                 for (int i = 0; i < m; i++)
                 {
-                    if (i == pivotRow) continue;
-                    double factor = u[i] / u_pivot;
-                    for (int j = 0; j < m; j++)
+                    if (i != pivotRow)
                     {
-                        B_inv[i, j] -= factor * B_inv[pivotRow.Value, j];
+                        x_B[i] -= minRatio * a_hat[i];
                     }
                 }
-                for (int j = 0; j < m; j++)
-                {
-                    B_inv[pivotRow.Value, j] /= u_pivot;
-                }
 
-                // Reconstruct tableau for display
-                double[,] T = BuildFinalTableau(A, b, c, m, n, basis, B_inv, pi, eps);
-                result.Tableaus.Add(new TableauTemplate(T, colHeaders, rowHeaders, iteration + 1, pivotRow, pivotColumn, $"T-{iteration + 1}"));
-                output.AppendLine("===");
-                output.AppendLine($"Iteration {iteration + 1} | Pivot @ (row={rowHeaders[pivotRow.Value]}, col={colHeaders[pivotColumn.Value]}) | T-{iteration + 1}");
-                output.AppendLine(FormatTableau(T, rowHeaders, colHeaders));
-                output.AppendLine(FormatIteration(B_inv, c, basis, n, m, x_B, A, b, rowHeaders, colHeaders, eps ));
+                // Update B_inv
+                B_inv = ComputeBInv(A, basis, m, n, eps);
+
+                // Update row headers
+                rowHeaders[pivotRow] = colHeaders[pivotCol];
+
+                // Add tableau for this iteration
+                double[,] currentT = BuildTableau(A, b, c, B_inv, basis, x_B, m, n, eps);
+                result.Tableaus.Add(new TableauTemplate(currentT, colHeaders, rowHeaders, iteration, pivotRow, pivotCol));
+
+                iteration++;
             }
 
-            result.Message = output.ToString();
             return result;
         }
 
         private static double[,] BuildInitialTableau(double[,] A, double[] b, double[] c, int m, int n, double eps)
         {
-            int rows = m + 1;
             int cols = n + m + 1;
+            int rows = m + 1;
             double[,] T = new double[rows, cols];
 
+            // Objective row
+            for (int j = 0; j < n; j++) T[0, j] = -c[j];
+
+            // Constraint rows
             for (int i = 0; i < m; i++)
             {
-                for (int j = 0; j < n; j++) T[i, j] = A[i, j];
-                for (int j = 0; j < m; j++) T[i, n + j] = (i == j) ? 1.0 : 0.0;
-                T[i, cols - 1] = b[i];
+                for (int j = 0; j < n; j++) T[i + 1, j] = A[i, j];
+                for (int j = 0; j < m; j++) T[i + 1, n + j] = (i == j) ? 1.0 : 0.0;
+                T[i + 1, cols - 1] = b[i];
             }
-            for (int j = 0; j < n; j++) T[rows - 1, j] = -c[j];
+
+            return T;
+        }
+
+        private static double[,] BuildTableau(double[,] A, double[] b, double[] c, double[,] B_inv, int[] basis, double[] x_B, int m, int n, double eps)
+        {
+            int cols = n + m + 1;
+            int rows = m + 1;
+            double[,] T = new double[rows, cols];
+
+            // Objective row (reduced costs)
+            for (int j = 0; j < n + m; j++)
+            {
+                if (basis.Contains(j))
+                {
+                    T[0, j] = 0;
+                }
+                else
+                {
+                    double[] a_j = GetColumn(A, j, m, n);
+                    double[] B_inv_a_j = MultiplyMatrixVector(B_inv, a_j);
+                    double reducedCost = GetCValue(c, j, n) - DotProduct(GetCB(c, basis, n, m), B_inv_a_j);
+                    T[0, j] = reducedCost;
+                }
+            }
+
+            // Objective RHS (optimal value)
+            T[0, cols - 1] = DotProduct(GetCB(c, basis, n, m), x_B);
+
+            // Constraint rows
+            for (int i = 0; i < m; i++)
+            {
+                for (int j = 0; j < n + m; j++)
+                {
+                    if (basis.Contains(j))
+                    {
+                        T[i + 1, j] = (basis[i] == j) ? 1.0 : 0.0;
+                    }
+                    else
+                    {
+                        double[] a_j = GetColumn(A, j, m, n);
+                        double[] B_inv_a_j = MultiplyMatrixVector(B_inv, a_j);
+                        T[i + 1, j] = B_inv_a_j[i];
+                    }
+                }
+                T[i + 1, cols - 1] = x_B[i];
+            }
 
             // Clean small values
             for (int i = 0; i < rows; i++)
@@ -213,45 +233,48 @@ namespace LPModelsLibrary.Models
             return T;
         }
 
-        private static double[,] BuildFinalTableau(double[,] A, double[] b, double[] c, int m, int n, int[] basis, double[,] B_inv, double[] pi, double eps)
+        private static double[] GetColumn(double[,] A, int j, int m, int n)
         {
-            int cols = n + m + 1;
-            double[,] T = new double[m + 1, cols];
+            double[] col = new double[m];
             for (int i = 0; i < m; i++)
             {
-                for (int j = 0; j < n + m; j++)
-                {
-                    double sum = 0;
-                    for (int k = 0; k < m; k++)
-                    {
-                        double a_kj = j < n ? A[k, j] : (j - n == k ? 1.0 : 0.0);
-                        sum += B_inv[i, k] * a_kj;
-                    }
-                    T[i, j] = sum;
-                }
-                T[i, cols - 1] = b[i];
+                col[i] = (j < n) ? A[i, j] : (j - n == i ? 1.0 : 0.0);
             }
-            for (int j = 0; j < n + m; j++)
-            {
-                double sum = 0;
-                for (int k = 0; k < m; k++)
-                {
-                    double a_kj = j < n ? A[k, j] : (j - n == k ? 1.0 : 0.0);
-                    sum += pi[k] * a_kj;
-                }
-                T[m, j] = sum - (j < n ? c[j] : 0);
-            }
-            T[m, cols - 1] = Dot(pi, b);
-
-            // Clean small values
-            for (int i = 0; i < m + 1; i++)
-                for (int j = 0; j < cols; j++)
-                    if (Math.Abs(T[i, j]) < eps) T[i, j] = 0.0;
-
-            return T;
+            return col;
         }
 
-        private static double Dot(double[] a, double[] b)
+        private static double GetCValue(double[] c, int j, int n)
+        {
+            return (j < n) ? c[j] : 0.0;
+        }
+
+        private static double[] GetCB(double[] c, int[] basis, int n, int m)
+        {
+            double[] cB = new double[m];
+            for (int i = 0; i < m; i++)
+            {
+                cB[i] = GetCValue(c, basis[i], n);
+            }
+            return cB;
+        }
+
+        private static double[] MultiplyMatrixVector(double[,] mat, double[] vec)
+        {
+            int rows = mat.GetLength(0);
+            double[] result = new double[rows];
+            for (int i = 0; i < rows; i++)
+            {
+                double sum = 0;
+                for (int k = 0; k < rows; k++)
+                {
+                    sum += mat[i, k] * vec[k];
+                }
+                result[i] = sum;
+            }
+            return result;
+        }
+
+        private static double DotProduct(double[] a, double[] b)
         {
             double sum = 0;
             for (int i = 0; i < a.Length; i++)
@@ -261,154 +284,104 @@ namespace LPModelsLibrary.Models
             return sum;
         }
 
-        private static double[] GetColumn(double[,] matrix, int col)
+        private static double[,] ComputeBInv(double[,] A, int[] basis, int m, int n, double eps)
         {
-            int rows = matrix.GetLength(0);
-            double[] column = new double[rows];
-            for (int i = 0; i < rows; i++)
-            {
-                column[i] = matrix[i, col];
-            }
-            return column;
-        }
-
-        private static double[] GetColumn(double[,] A, int col, int n, int m)
-        {
-            double[] column = new double[m];
+            // Build B matrix from basis columns
+            double[,] B = new double[m, m];
             for (int i = 0; i < m; i++)
             {
-                column[i] = col < n ? A[i, col] : (col - n == i ? 1.0 : 0.0);
-            }
-            return column;
-        }
-
-        private static string FormatTableau(double[,] T, string[] rowHeaders, string[] colHeaders)
-        {
-            StringBuilder sb = new StringBuilder();
-            int cols = colHeaders.Length;
-            int rows = T.GetLength(0);
-
-            sb.Append("     |");
-            for (int j = 0; j < cols - 1; j++)
-            {
-                sb.Append($" {colHeaders[j],6}");
-            }
-            sb.AppendLine($" {colHeaders[cols - 1],6}");
-            sb.AppendLine(new string('-', 62));
-
-            for (int i = 0; i < rows; i++)
-            {
-                sb.Append($"{rowHeaders[i],6} |");
-                for (int j = 0; j < cols - 1; j++)
+                double[] col = GetColumn(A, basis[i], m, n);
+                for (int k = 0; k < m; k++)
                 {
-                    sb.Append($" {T[i, j],6:F3}");
+                    B[k, i] = col[k];
                 }
-                sb.AppendLine($" {T[i, cols - 1],6:F3}");
-            }
-            sb.AppendLine(new string('-', 62));
-
-            return sb.ToString();
-        }
-
-        private static string FormatIteration(double[,] B_inv, double[] c, int[] basis, int n, int m, double[] x_B, double[,] A, double[] b, string[] rowHeaders, string[] colHeaders, double eps)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            // Xbv
-            sb.AppendLine("Xbv");
-            for (int i = 0; i < m; i++)
-            {
-                sb.AppendLine(rowHeaders[i]);
             }
 
-            // B
-            sb.AppendLine("B");
+            // Compute inverse using Gaussian elimination
+            double[,] aug = new double[m, 2 * m]; // Augmented matrix [B | I]
             for (int i = 0; i < m; i++)
             {
                 for (int j = 0; j < m; j++)
                 {
-                    sb.Append(B_inv[i, j].ToString("0.###") + " ");
+                    aug[i, j] = B[i, j];
+                    aug[i, m + j] = (i == j) ? 1.0 : 0.0;
                 }
-                sb.AppendLine();
             }
 
-            // Cbv
-            sb.AppendLine("Cbv");
-            for (int i = 0; i < m; i++)
+            // Gaussian elimination with partial pivoting
+            for (int p = 0; p < m; p++)
             {
-                sb.AppendLine((basis[i] < n ? c[basis[i]] : 0).ToString("0.###"));
+                // Find pivot row
+                int maxRow = p;
+                for (int i = p + 1; i < m; i++)
+                {
+                    if (Math.Abs(aug[i, p]) > Math.Abs(aug[maxRow, p]))
+                    {
+                        maxRow = i;
+                    }
+                }
+
+                // Swap rows
+                if (maxRow != p)
+                {
+                    double[] temp = new double[2 * m];
+                    for (int j = 0; j < 2 * m; j++)
+                    {
+                        temp[j] = aug[p, j];
+                        aug[p, j] = aug[maxRow, j];
+                        aug[maxRow, j] = temp[j];
+                    }
+                }
+
+                // Check for singularity
+                if (Math.Abs(aug[p, p]) < eps)
+                {
+                    throw new InvalidOperationException("Matrix B is singular; cannot invert.");
+                }
+
+                // Eliminate below pivot
+                for (int i = p + 1; i < m; i++)
+                {
+                    double factor = aug[i, p] / aug[p, p];
+                    for (int j = p; j < 2 * m; j++)
+                    {
+                        aug[i, j] -= factor * aug[p, j];
+                    }
+                }
             }
 
-            // B-1
-            sb.AppendLine("B-1");
+            // Back substitution
+            for (int p = m - 1; p >= 0; p--)
+            {
+                // Normalize pivot row
+                double pivot = aug[p, p];
+                for (int j = p; j < 2 * m; j++)
+                {
+                    aug[p, j] /= pivot;
+                }
+
+                // Eliminate above pivot
+                for (int i = 0; i < p; i++)
+                {
+                    double factor = aug[i, p];
+                    for (int j = p; j < 2 * m; j++)
+                    {
+                        aug[i, j] -= factor * aug[p, j];
+                    }
+                }
+            }
+
+            // Extract inverse
+            double[,] B_inv = new double[m, m];
             for (int i = 0; i < m; i++)
             {
                 for (int j = 0; j < m; j++)
                 {
-                    sb.Append(B_inv[i, j].ToString("0.###") + " ");
-                }
-                sb.AppendLine();
-            }
-
-            // CbvB-1
-            sb.AppendLine("CbvB-1");
-            for (int i = 0; i < m; i++)
-            {
-                double sum = 0;
-                for (int j = 0; j < m; j++)
-                {
-                    sum += (basis[j] < n ? c[basis[j]] : 0) * B_inv[j, i];
-                }
-                sb.AppendLine(sum.ToString("0.###"));
-            }
-
-            // Price Out
-            sb.AppendLine("Price Out");
-            sb.AppendLine("Xnbv");
-            for (int j = 0; j < n; j++)
-            {
-                if (basis.Contains(j)) continue;
-                sb.AppendLine(colHeaders[j]);
-            }
-
-            sb.AppendLine("Cnbv");
-            for (int j = 0; j < n; j++)
-            {
-                if (basis.Contains(j)) continue;
-                sb.AppendLine(c[j].ToString("0.###"));
-            }
-
-            // A1 (using the pivot column, approximated as first non-basic for simplicity)
-            sb.AppendLine("A1");
-            int pivotCol = basis.Contains(0) ? 1 : 0;
-            for (int i = 0; i < m; i++)
-            {
-                sb.AppendLine(A[i, pivotCol].ToString("0.###"));
-            }
-
-            // b
-            sb.AppendLine("b");
-            for (int i = 0; i < m; i++)
-            {
-                sb.AppendLine(b[i].ToString("0.###"));
-            }
-
-            // θ
-            sb.AppendLine("θ");
-            for (int i = 0; i < m; i++)
-            {
-                double a_i_pivot = A[i, pivotCol];
-                if (a_i_pivot > eps)
-                {
-                    sb.AppendLine((b[i] / a_i_pivot).ToString("0.###"));
-                }
-                else
-                {
-                    sb.AppendLine("N/A");
+                    B_inv[i, j] = aug[i, m + j];
                 }
             }
 
-            return sb.ToString();
+            return B_inv;
         }
     }
 }
