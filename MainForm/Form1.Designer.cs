@@ -136,6 +136,7 @@
             revisedPrimalSimplexToolStripMenuItem.Name = "revisedPrimalSimplexToolStripMenuItem";
             revisedPrimalSimplexToolStripMenuItem.Size = new Size(246, 26);
             revisedPrimalSimplexToolStripMenuItem.Text = "Revised Primal Simplex";
+            revisedPrimalSimplexToolStripMenuItem.Click += revisedPrimalSimplexToolStripMenuItem_Click;
             // 
             // cuttingPlaneToolStripMenuItem
             // 

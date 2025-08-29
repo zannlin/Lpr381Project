@@ -519,7 +519,7 @@ namespace LPModelsLibrary.Models
                 {
                     newTable[i, j] = optimalTab.Tableau[i, j];
                 }
-                // need to talk to reggie
+                // need to talk to reggie 
             }
 
 
@@ -731,5 +731,5 @@ namespace LPModelsLibrary.Models
 
 
 
-}
+    }
 }

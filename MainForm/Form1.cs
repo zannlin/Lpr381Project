@@ -84,47 +84,76 @@ namespace MainForm
             richTextBoxOptimal.Clear();
             richTextBoxOptimal.AppendText(summary);
         }
-        private void DisplayRevisedSimplexResults(SimplexResult result)
-        {
-            // 1) Canonical: summarize the input
-            richTextBoxCanonical.Clear();
-            richTextBoxCanonical.AppendText("Linear Programming Problem (parsed from input):\n");
-            richTextBoxCanonical.AppendText($"Objective Function: {string.Join(" + ", result.PrimalVariables.Select((v, i) => $"x{i + 1}={v:0.###}"))}\n");
-            richTextBoxCanonical.AppendText($"Constraints: Not fully displayed (see tableau for details)\n"); // Placeholder, expand if needed
 
-            // 2) Tableau: display all tableau iterations
+        private void DisplayRevisedPrimalSimplexOutput(SimplexResult result)
+        {
+            // Clear existing content
+            richTextBoxCanonical.Clear();
             richTextBoxTableau.Clear();
-            foreach (var tableau in result.Tableaus)
+            richTextBoxOptimal.Clear();
+
+            // 1. Canonical Form (Objective Function and Initial Insight)
+            richTextBoxCanonical.AppendText("Revised Primal Simplex - Canonical Form:\n");
+            if (result == null)
             {
-                richTextBoxTableau.AppendText(tableau.ToString());
-                richTextBoxTableau.AppendText("\n\n");
+                richTextBoxCanonical.AppendText("No result data available.\n");
+                return;
             }
 
-            // 3) Optimal: extract the top summary block (until first tableau row or error)
-            string fullTableauText = string.Join("\n", result.Tableaus.Select(t => t.ToString()));
-            var lines = fullTableauText
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .ToList();
-
-            int splitIdx = lines.FindIndex(l => l.StartsWith("---", StringComparison.Ordinal) || // Tableau separator
-                                              l.StartsWith("Error:", StringComparison.OrdinalIgnoreCase));
-
-            string summary;
-            if (splitIdx == -1 || splitIdx == 0)
+            if (result.IsInfeasible || result.IsUnbounded)
             {
-                // If no separator or only one line, show full output
-                summary = string.Join(Environment.NewLine, lines);
+                richTextBoxCanonical.AppendText($"Status: {result.Message ?? "Unknown status"}\n");
+            }
+            else if (result.PrimalVariables != null)
+            {
+                richTextBoxCanonical.AppendText("Initial Variables: " + string.Join(" ", result.PrimalVariables.Select((v, i) => $"x{i + 1}={v:0.###}")) + "\n");
+                if (result.SlackExcessVariables != null)
+                {
+                    richTextBoxCanonical.AppendText("Slack Variables: " + string.Join(" ", result.SlackExcessVariables.Select((v, i) => $"s{i + 1}={v:0.###}")) + "\n");
+                }
+            }
+
+            // 2. Tableau Iterations
+            richTextBoxTableau.AppendText("Revised Primal Simplex - Tableau Iterations:\n");
+            if (result.Tableaus != null && result.Tableaus.Count > 0)
+            {
+                foreach (var tableau in result.Tableaus)
+                {
+                    richTextBoxTableau.AppendText(tableau.ToString());
+                    richTextBoxTableau.AppendText("\n");
+                }
             }
             else
             {
-                summary = string.Join(Environment.NewLine, lines.Take(splitIdx));
+                richTextBoxTableau.AppendText("No tableau data available.\n");
             }
 
-            richTextBoxOptimal.Clear();
-            richTextBoxOptimal.AppendText(summary);
-            if (!string.IsNullOrEmpty(result.Message))
+            // 3. Optimal Solution
+            richTextBoxOptimal.AppendText("Revised Primal Simplex - Optimal Solution:\n");
+            if (result.IsInfeasible || result.IsUnbounded)
             {
-                richTextBoxOptimal.AppendText($"\nMessage: {result.Message}");
+                richTextBoxOptimal.AppendText($"Status: {result.Message ?? "Unknown status"}\n");
+            }
+            else if (result.PrimalVariables != null && !double.IsNaN(result.OptimalValue))
+            {
+                richTextBoxOptimal.AppendText($"Optimal Value: {result.OptimalValue:0.###}\n");
+                for (int i = 0; i < result.PrimalVariables.Length; i++)
+                    richTextBoxOptimal.AppendText($"x{i + 1} = {result.PrimalVariables[i]:0.###}\n");
+                if (result.SlackExcessVariables != null)
+                {
+                    for (int i = 0; i < result.SlackExcessVariables.Length; i++)
+                        richTextBoxOptimal.AppendText($"s{i + 1} = {result.SlackExcessVariables[i]:0.###}\n");
+                }
+            }
+            else
+            {
+                richTextBoxOptimal.AppendText("No optimal solution data available.\n");
+            }
+
+            // Store tableaus for sensitivity analysis
+            if (result.Tableaus != null && result.Tableaus.Count > 0)
+            {
+                StoreTableaus(result);
             }
         }
 
@@ -380,51 +409,39 @@ namespace MainForm
             }
         }
 
+
+        //Don't use this event, it's broken 
         private void revisedSimplexToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
+                richTextBoxCanonical.AppendText("Debug: Starting Revised Primal Simplex\n");
                 // Get content from the Input textbox
                 string[] inputLines = textBoxInput.Lines;
+                richTextBoxCanonical.AppendText($"Debug: Input lines: {string.Join(", ", inputLines)}\n");
 
                 // Parse LP from file content
                 var model = new LinearModel(inputLines);
+                richTextBoxCanonical.AppendText($"Debug: Model parsed - Constraints: {model.Constraints?.Length}, RHS: {model.RightHandSide?.Length}, Objective: {model.ObjectiveFuntion?.Length}\n");
 
-                // Solve with Revised Primal Simplex
+                // Solve with revised primal simplex
                 var result = RevisedPrimalSimplex.Solve(
                     model.Constraints,
                     model.RightHandSide,
-                    model.ObjectiveFuntion
+                    model.ObjectiveFuntion // Using existing typo as-is
                 );
-
-                // Console check to verify output
-                Console.WriteLine("=== Revised Primal Simplex Debug Output ===");
-                Console.WriteLine($"Optimal Value: {result.OptimalValue:0.###}");
-                Console.WriteLine("Primal Variables:");
-                for (int i = 0; i < result.PrimalVariables.Length; i++)
-                {
-                    Console.WriteLine($"x{i + 1} = {result.PrimalVariables[i]:0.###}");
-                }
-                Console.WriteLine("Tableau Count: " + result.Tableaus.Count);
-                if (result.Tableaus.Any())
-                {
-                    Console.WriteLine("First Tableau Sample:");
-                    Console.WriteLine(result.Tableaus[0].ToString());
-                }
-                Console.WriteLine($"Message: {result.Message}");
-                Console.WriteLine($"Is Infeasible: {result.IsInfeasible}");
-                Console.WriteLine($"Is Unbounded: {result.IsUnbounded}");
-                Console.WriteLine("==========================================");
+                richTextBoxCanonical.AppendText($"Debug: Solve completed - Result: {result != null}\n");
 
                 // Display results
-                DisplayResults(result);
+                DisplayRevisedPrimalSimplexOutput(result);
             }
             catch (Exception ex)
             {
+                richTextBoxCanonical.AppendText($"Debug: Exception caught: {ex.Message}\n");
                 MessageBox.Show("Error: " + ex.Message);
-                Console.WriteLine("Error: " + ex.Message);
             }
         }
+
 
         private void primalSimplexToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -717,6 +734,90 @@ namespace MainForm
         private void dualityAnalysisToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ConfigureSensitivityControls("Duality Analysis");
+        }
+
+        private void revisedPrimalSimplexToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Get content from the Input textbox
+                string[] inputLines = textBoxInput.Lines;
+
+                // Manually parse input
+                if (inputLines.Length < 2)
+                    throw new Exception("Input must contain at least an objective and a constraint.");
+                string objectiveLine = inputLines[0].Trim(); // e.g., "max +2 +3 +3 +5 +2 +4"
+                var constraintLines = inputLines.Skip(1).Take(inputLines.Length - 2).Select(l => l.Trim()); // Constraints
+                string[] binLines = inputLines.Length > 2 ? inputLines.Skip(inputLines.Length - 1).Take(1).ToArray() : new string[0]; // "int bin bin bin bin bin"
+
+                // Parse objective (c)
+                string[] objParts = objectiveLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (objParts.Length < 2 || !objParts[0].ToLower().StartsWith("max"))
+                    throw new Exception("Invalid objective format. Expected 'max' followed by coefficients.");
+                double[] c = objParts.Skip(1).Select(p => double.Parse(p.TrimStart('+'))).ToArray(); // [2, 3, 3, 5, 2, 4]
+
+                // Parse constraints (A and b) without pre-adding slack
+                int numConstraints = constraintLines.Count();
+                int numVars = c.Length;
+                double[,] A = new double[numConstraints, numVars]; // No slack column, let library handle it
+                double[] b = new double[numConstraints];
+
+                int constraintIdx = 0;
+                foreach (string constraint in constraintLines)
+                {
+                    string[] parts = constraint.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < numVars + 1) // +1 for RHS
+                        throw new Exception($"Constraint '{constraint}' has insufficient coefficients. Expected {numVars + 1} parts, got {parts.Length}.");
+                    for (int i = 0; i < numVars; i++)
+                    {
+                        A[constraintIdx, i] = double.Parse(parts[i].TrimStart('+')); // Coefficients
+                    }
+                    b[constraintIdx] = double.Parse(parts[parts.Length - 1].TrimStart("<= ".ToCharArray())); // RHS
+                    constraintIdx++;
+                }
+
+                // Handle binary constraints if "int bin" is present
+                if (binLines.Length > 0 && binLines[0].StartsWith("int"))
+                {
+                    string[] binParts = binLines[0].Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    int binCount = binParts.Length - 1; // Count "bin" occurrences
+                    if (binCount == numVars)
+                    {
+                        int origConstraints = numConstraints;
+                        numConstraints += numVars;
+
+                        // Resize A manually without slack
+                        double[,] newA = new double[numConstraints, numVars];
+                        for (int i = 0; i < origConstraints; i++)
+                            for (int j = 0; j < numVars; j++)
+                                newA[i, j] = A[i, j];
+                        for (int i = origConstraints; i < numConstraints; i++)
+                        {
+                            int varIdx = i - origConstraints;
+                            if (varIdx >= 0 && varIdx < numVars)
+                            {
+                                newA[i, varIdx] = 1.0; // x_i <= 1
+                            }
+                        }
+                        A = newA;
+
+                        // Resize b
+                        Array.Resize(ref b, numConstraints);
+                        for (int i = origConstraints; i < numConstraints; i++)
+                            b[i] = 1.0; // RHS for binary constraints
+                    }
+                }
+
+                // Solve with revised primal simplex (passing A, b, c)
+                var result = RevisedPrimalSimplex.Solve(A, b, c);
+
+                // Display results
+                DisplayRevisedPrimalSimplexOutput(result);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}\nStack Trace: {ex.StackTrace}");
+            }
         }
     }
 }
