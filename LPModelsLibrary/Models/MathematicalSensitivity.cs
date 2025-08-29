@@ -65,7 +65,7 @@ namespace LPModelsLibrary.Models
             return rangeInfo;
         }
 
-        private List<int> getBasicVarColumnIndex()
+        public List<int> getBasicVarColumnIndex()
         {// This method goescolumn by column to check if it is a basic variable
             int rows = optimalTab.Tableau.GetLength(0);
             int cols = optimalTab.Tableau.GetLength(1);
