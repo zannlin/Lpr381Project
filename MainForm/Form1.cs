@@ -1,9 +1,10 @@
-﻿using System;
+﻿using LPModelsLibrary;
+using LPModelsLibrary.Models;
+using System;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
-using LPModelsLibrary;
-using LPModelsLibrary.Models;
 
 namespace MainForm
 {
@@ -12,6 +13,15 @@ namespace MainForm
         public Form1()
         {
             InitializeComponent();
+        }
+
+        private TableauTemplate optimalTableau;
+        private TableauTemplate originalTableau;
+
+        private void StoreTableaus(SimplexResult result)
+        {
+            optimalTableau = result.Tableaus.Last();
+            originalTableau = result.Tableaus.First();
         }
 
         private void DisplayResults(SimplexResult result)
@@ -41,7 +51,7 @@ namespace MainForm
         {
             // 1) Canonical: summarize the input
             richTextBoxCanonical.Clear();
-            richTextBoxCanonical.AppendText("Knapsack Problem (parsed from input):\n");
+            richTextBoxCanonical.AppendText("Knapsack Problem:\n");
             richTextBoxCanonical.AppendText($"Values:   {string.Join(", ", values.Select(v => v.ToString("0.###", CultureInfo.InvariantCulture)))}\n");
             richTextBoxCanonical.AppendText($"Weights:  {string.Join(", ", weights.Select(w => w.ToString("0.###", CultureInfo.InvariantCulture)))}\n");
             richTextBoxCanonical.AppendText($"Capacity: {capacity.ToString("0.###", CultureInfo.InvariantCulture)}\n");
@@ -126,6 +136,207 @@ namespace MainForm
             }
         }
 
+        private void ConfigureSensitivityControls(string methodName)
+        {
+            if (optimalTableau == null || originalTableau == null)
+            {
+                sensitivityPanel.Controls.Clear();
+                sensitivityPanel.Controls.Add(new Label { Text = "Run an algorithm first to generate tableaus.", AutoSize = true, Margin = new Padding(5) });
+                return;
+            }
+
+            sensitivityPanel.Controls.Clear();
+            MathematicalSensitivity sensitivity = new MathematicalSensitivity(optimalTableau, originalTableau);
+
+            switch (methodName)
+            {
+                case "Range of Non-Basic Variable":
+                    Label nbLabel = new Label { Text = "Select Non-Basic Variable Index:", AutoSize = true, Margin = new Padding(5) };
+                    ComboBox nbCombo = new ComboBox
+                    {
+                        Name = "cbNonBasic",
+                        Margin = new Padding(5),
+                        DropDownStyle = ComboBoxStyle.DropDownList
+                    };
+                    for (int i = 0; i < originalTableau.ColHeaders.Length - 1; i++) // Exclude RHS
+                        nbCombo.Items.Add(i);
+                    Button nbButton = new Button { Text = "Calculate Range", Margin = new Padding(5) };
+                    nbButton.Click += (s, e) =>
+                    {
+                        if (nbCombo.SelectedItem != null)
+                        {
+
+                            int index = (int)nbCombo.SelectedItem;
+                            string range = sensitivity.Range_Of_NonBasic_Variable(index);
+                            sensitivityPanel.Controls.Add(new Label { Text = range, AutoSize = true, Margin = new Padding(5) });
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(nbLabel);
+                    sensitivityPanel.Controls.Add(nbCombo);
+                    sensitivityPanel.Controls.Add(nbButton);
+                    break;
+
+                case "Change Non-Basic Variable":
+                    Label nbChangeLabel = new Label { Text = "Select Non-Basic Variable Index:", AutoSize = true, Margin = new Padding(5) };
+                    ComboBox nbChangeCombo = new ComboBox
+                    {
+                        Name = "cbNonBasicChange",
+                        Margin = new Padding(5),
+                        DropDownStyle = ComboBoxStyle.DropDownList
+                    };
+                    for (int i = 0; i < originalTableau.ColHeaders.Length - 1; i++)
+                        nbChangeCombo.Items.Add(i);
+                    Label nbNewValueLabel = new Label { Text = "New Coefficient:", AutoSize = true, Margin = new Padding(5) };
+                    TextBox nbNewValue = new TextBox { Name = "txtNewValue", Margin = new Padding(5), Width = 100 };
+                    Button nbChangeButton = new Button { Text = "Apply Change", Margin = new Padding(5) };
+                    nbChangeButton.Click += (s, e) =>
+                    {
+                        if (double.TryParse(nbNewValue.Text, out double newCoef) && nbChangeCombo.SelectedItem != null)
+                        {
+                            int index = (int)nbChangeCombo.SelectedItem;
+                            string result = sensitivity.change_nonBasic_Variable_Coefficient(index, newCoef);
+                            sensitivityPanel.Controls.Add(new Label { Text = result, AutoSize = true, Margin = new Padding(5) });
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(nbChangeLabel);
+                    sensitivityPanel.Controls.Add(nbChangeCombo);
+                    sensitivityPanel.Controls.Add(nbNewValueLabel);
+                    sensitivityPanel.Controls.Add(nbNewValue);
+                    sensitivityPanel.Controls.Add(nbChangeButton);
+                    break;
+
+                case "Range of Basic Variable":
+                    Label bvLabel = new Label { Text = "Select Basic Variable Index:", AutoSize = true, Margin = new Padding(5) };
+                    ComboBox bvCombo = new ComboBox
+                    {
+                        Name = "cbBasic",
+                        Margin = new Padding(5),
+                        DropDownStyle = ComboBoxStyle.DropDownList
+                    };
+                    var basicIndices = sensitivity.getBasicVarColumnIndex();
+                    foreach (var index in basicIndices)
+                        bvCombo.Items.Add(index);
+                    Button bvButton = new Button { Text = "Calculate Range", Margin = new Padding(5) };
+                    bvButton.Click += (s, e) =>
+                    {
+                        if (bvCombo.SelectedItem != null)
+                        {
+                            int index = (int)bvCombo.SelectedItem;
+                            var (upper, lower) = sensitivity.range_Of_Basic_Variable(index);
+                            sensitivityPanel.Controls.Add(new Label { Text = $"Upper Range: {upper}\nLower Range: {lower}", AutoSize = true, Margin = new Padding(5) });
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(bvLabel);
+                    sensitivityPanel.Controls.Add(bvCombo);
+                    sensitivityPanel.Controls.Add(bvButton);
+                    break;
+
+                case "Change Basic Variable":
+                    Label bvChangeLabel = new Label { Text = "Select Basic Variable Index:", AutoSize = true, Margin = new Padding(5) };
+                    ComboBox bvChangeCombo = new ComboBox
+                    {
+                        Name = "cbBasicChange",
+                        Margin = new Padding(5),
+                        DropDownStyle = ComboBoxStyle.DropDownList
+                    };
+                    // Compute basicIndices within this case
+                    var basicIndicesBV = sensitivity.getBasicVarColumnIndex();
+                    foreach (var index in basicIndicesBV)
+                        bvChangeCombo.Items.Add(index);
+                    Label bvNewValueLabel = new Label { Text = "New Coefficient:", AutoSize = true, Margin = new Padding(5) };
+                    TextBox bvNewValue = new TextBox { Name = "txtBVNewValue", Margin = new Padding(5), Width = 100 };
+                    Button bvChangeButton = new Button { Text = "Apply Change", Margin = new Padding(5) };
+                    bvChangeButton.Click += (s, e) =>
+                    {
+                        if (double.TryParse(bvNewValue.Text, out double newCoef) && bvChangeCombo.SelectedItem != null)
+                        {
+                            int index = (int)bvChangeCombo.SelectedItem;
+                            double[] newZRow = sensitivity.change_Basic_Variable_Coefficient(index, newCoef);
+                            sensitivityPanel.Controls.Add(new Label { Text = "New Z-Row: " + string.Join(", ", newZRow.Select(x => x.ToString("F3"))), AutoSize = true, Margin = new Padding(5) });
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(bvChangeLabel);
+                    sensitivityPanel.Controls.Add(bvChangeCombo);
+                    sensitivityPanel.Controls.Add(bvNewValueLabel);
+                    sensitivityPanel.Controls.Add(bvNewValue);
+                    sensitivityPanel.Controls.Add(bvChangeButton);
+                    break;
+
+                case "Range of Constraint RHS":
+                    Label rhsLabel = new Label { Text = "Select Constraint Row Index:", AutoSize = true, Margin = new Padding(5) };
+                    ComboBox rhsCombo = new ComboBox
+                    {
+                        Name = "cbRHS",
+                        Margin = new Padding(5),
+                        DropDownStyle = ComboBoxStyle.DropDownList
+                    };
+                    for (int i = 1; i < optimalTableau.Tableau.GetLength(0); i++) // Exclude objective row
+                        rhsCombo.Items.Add(i);
+                    Button rhsButton = new Button { Text = "Calculate Range", Margin = new Padding(5) };
+                    rhsButton.Click += (s, e) =>
+                    {
+                        if (rhsCombo.SelectedItem != null)
+                        {
+                            int index = (int)rhsCombo.SelectedItem;
+                            var (lower, upper) = sensitivity.range_RightHandSide(index);
+                            sensitivityPanel.Controls.Add(new Label { Text = $"Lower Range: {lower}\nUpper Range: {upper}", AutoSize = true, Margin = new Padding(5) });
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(rhsLabel);
+                    sensitivityPanel.Controls.Add(rhsCombo);
+                    sensitivityPanel.Controls.Add(rhsButton);
+                    break;
+
+                case "Change Constraint RHS":
+                    Label rhsChangeLabel = new Label { Text = "Select Constraint Row Index:", AutoSize = true, Margin = new Padding(5) };
+                    ComboBox rhsChangeCombo = new ComboBox
+                    {
+                        Name = "cbRHSChange",
+                        Margin = new Padding(5),
+                        DropDownStyle = ComboBoxStyle.DropDownList
+                    };
+                    for (int i = 1; i < optimalTableau.Tableau.GetLength(0); i++)
+                        rhsChangeCombo.Items.Add(i);
+                    Label rhsNewValueLabel = new Label { Text = "New RHS Value:", AutoSize = true, Margin = new Padding(5) };
+                    TextBox rhsNewValue = new TextBox { Name = "txtRHSNewValue", Margin = new Padding(5), Width = 100 };
+                    Button rhsChangeButton = new Button { Text = "Apply Change", Margin = new Padding(5) };
+                    rhsChangeButton.Click += (s, e) =>
+                    {
+                        if (double.TryParse(rhsNewValue.Text, out double newValue) && rhsChangeCombo.SelectedItem != null)
+                        {
+                            int index = (int)rhsChangeCombo.SelectedItem;
+                            var (bOptimal, optValue) = sensitivity.change_RightHandSide(index, newValue);
+                            sensitivityPanel.Controls.Add(new Label { Text = $"New Optimal b: {string.Join(", ", bOptimal.Select(x => x.ToString("F3")))}\nNew Optimal Value: {optValue:F3}", AutoSize = true, Margin = new Padding(5) });
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(rhsChangeLabel);
+                    sensitivityPanel.Controls.Add(rhsChangeCombo);
+                    sensitivityPanel.Controls.Add(rhsNewValueLabel);
+                    sensitivityPanel.Controls.Add(rhsNewValue);
+                    sensitivityPanel.Controls.Add(rhsChangeButton);
+                    break;
+
+                case "Add New Activity":
+                    // Placeholder (implement when add_column is ready)
+                    sensitivityPanel.Controls.Add(new Label { Text = "Add New Activity: Not implemented yet.", AutoSize = true, Margin = new Padding(5) });
+                    break;
+
+                case "Add New Constraint":
+                    // Placeholder (implement when add_row is ready)
+                    sensitivityPanel.Controls.Add(new Label { Text = "Add New Constraint: Not implemented yet.", AutoSize = true, Margin = new Padding(5) });
+                    break;
+
+                case "Display Shadow Prices":
+                    sensitivityPanel.Controls.Add(new Label { Text = sensitivity.display_shadow_Prices(), AutoSize = true, Margin = new Padding(5) });
+                    break;
+
+                case "Duality Analysis":
+                    // Placeholder (implement full DualSimplex display)
+                    sensitivityPanel.Controls.Add(new Label { Text = "Duality Analysis: Implementing Dual Simplex...", AutoSize = true, Margin = new Padding(5) });
+                    break;
+            }
+        }
+
         private void revisedSimplexToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
@@ -149,6 +360,7 @@ namespace MainForm
                 );
 
                 // Display results
+                StoreTableaus(result);
                 DisplayResults(result);
             }
             catch (Exception ex)
@@ -360,6 +572,67 @@ namespace MainForm
             {
                 MessageBox.Show("Branch & Bound error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void rangeOfNonBasicVariablesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Range of Non-Basic Variable");
+        }
+
+        private void changeNonBasicVariableToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Change Non-Basic Variable");
+        }
+
+        private void rangeOfBasicVariableToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Range of Basic Variable");
+
+        }
+
+        private void changeBasicVariableToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Change Basic Variable");
+        }
+
+        private void rangeOfConstraintRHSToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Range of Constraint RHS");
+        }
+
+        private void changeConstraintRHSToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Change Constraint RHS");
+        }
+
+        private void rangeOfVariableInNonBasicColumnToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void changeVariableInNonBasicColumnToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void addNewActivityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Add New Activity");
+        }
+
+        private void addNewConstraintToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Add New Constraint");
+        }
+
+        private void displayShadowPricesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Display Shadow Prices");
+        }
+
+        private void dualityAnalysisToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConfigureSensitivityControls("Duality Analysis");
         }
     }
 }

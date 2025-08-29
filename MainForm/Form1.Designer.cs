@@ -62,7 +62,7 @@
             tabOpt = new TabPage();
             richTextBoxOptimal = new RichTextBox();
             tabSens = new TabPage();
-            richTextBox4 = new RichTextBox();
+            sensitivityPanel = new FlowLayoutPanel();
             menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -170,72 +170,84 @@
             rangeOfNonBasicVariablesToolStripMenuItem.Name = "rangeOfNonBasicVariablesToolStripMenuItem";
             rangeOfNonBasicVariablesToolStripMenuItem.Size = new Size(353, 26);
             rangeOfNonBasicVariablesToolStripMenuItem.Text = "Range of Non-Basic Variables";
+            rangeOfNonBasicVariablesToolStripMenuItem.Click += rangeOfNonBasicVariablesToolStripMenuItem_Click;
             // 
             // changeNonBasicVariableToolStripMenuItem
             // 
             changeNonBasicVariableToolStripMenuItem.Name = "changeNonBasicVariableToolStripMenuItem";
             changeNonBasicVariableToolStripMenuItem.Size = new Size(353, 26);
             changeNonBasicVariableToolStripMenuItem.Text = "Change Non-Basic Variable";
+            changeNonBasicVariableToolStripMenuItem.Click += changeNonBasicVariableToolStripMenuItem_Click;
             // 
             // rangeOfBasicVariableToolStripMenuItem
             // 
             rangeOfBasicVariableToolStripMenuItem.Name = "rangeOfBasicVariableToolStripMenuItem";
             rangeOfBasicVariableToolStripMenuItem.Size = new Size(353, 26);
             rangeOfBasicVariableToolStripMenuItem.Text = "Range of Basic Variable";
+            rangeOfBasicVariableToolStripMenuItem.Click += rangeOfBasicVariableToolStripMenuItem_Click;
             // 
             // changeBasicVariableToolStripMenuItem
             // 
             changeBasicVariableToolStripMenuItem.Name = "changeBasicVariableToolStripMenuItem";
             changeBasicVariableToolStripMenuItem.Size = new Size(353, 26);
             changeBasicVariableToolStripMenuItem.Text = "Change Basic Variable";
+            changeBasicVariableToolStripMenuItem.Click += changeBasicVariableToolStripMenuItem_Click;
             // 
             // rangeOfConstraintRHSToolStripMenuItem
             // 
             rangeOfConstraintRHSToolStripMenuItem.Name = "rangeOfConstraintRHSToolStripMenuItem";
             rangeOfConstraintRHSToolStripMenuItem.Size = new Size(353, 26);
             rangeOfConstraintRHSToolStripMenuItem.Text = "Range of Constraint RHS";
+            rangeOfConstraintRHSToolStripMenuItem.Click += rangeOfConstraintRHSToolStripMenuItem_Click;
             // 
             // changeConstraintRHSToolStripMenuItem
             // 
             changeConstraintRHSToolStripMenuItem.Name = "changeConstraintRHSToolStripMenuItem";
             changeConstraintRHSToolStripMenuItem.Size = new Size(353, 26);
             changeConstraintRHSToolStripMenuItem.Text = "Change Constraint RHS";
+            changeConstraintRHSToolStripMenuItem.Click += changeConstraintRHSToolStripMenuItem_Click;
             // 
             // rangeOfVariableInNonBasicColumnToolStripMenuItem
             // 
             rangeOfVariableInNonBasicColumnToolStripMenuItem.Name = "rangeOfVariableInNonBasicColumnToolStripMenuItem";
             rangeOfVariableInNonBasicColumnToolStripMenuItem.Size = new Size(353, 26);
             rangeOfVariableInNonBasicColumnToolStripMenuItem.Text = "Range of Variable in Non-Basic Column";
+            rangeOfVariableInNonBasicColumnToolStripMenuItem.Click += rangeOfVariableInNonBasicColumnToolStripMenuItem_Click;
             // 
             // changeVariableInNonBasicColumnToolStripMenuItem
             // 
             changeVariableInNonBasicColumnToolStripMenuItem.Name = "changeVariableInNonBasicColumnToolStripMenuItem";
             changeVariableInNonBasicColumnToolStripMenuItem.Size = new Size(353, 26);
             changeVariableInNonBasicColumnToolStripMenuItem.Text = "Change Variable in Non-Basic Column";
+            changeVariableInNonBasicColumnToolStripMenuItem.Click += changeVariableInNonBasicColumnToolStripMenuItem_Click;
             // 
             // addNewActivityToolStripMenuItem
             // 
             addNewActivityToolStripMenuItem.Name = "addNewActivityToolStripMenuItem";
             addNewActivityToolStripMenuItem.Size = new Size(353, 26);
             addNewActivityToolStripMenuItem.Text = "Add New Activity";
+            addNewActivityToolStripMenuItem.Click += addNewActivityToolStripMenuItem_Click;
             // 
             // addNewConstraintToolStripMenuItem
             // 
             addNewConstraintToolStripMenuItem.Name = "addNewConstraintToolStripMenuItem";
             addNewConstraintToolStripMenuItem.Size = new Size(353, 26);
             addNewConstraintToolStripMenuItem.Text = "Add New Constraint";
+            addNewConstraintToolStripMenuItem.Click += addNewConstraintToolStripMenuItem_Click;
             // 
             // displayShadowPricesToolStripMenuItem
             // 
             displayShadowPricesToolStripMenuItem.Name = "displayShadowPricesToolStripMenuItem";
             displayShadowPricesToolStripMenuItem.Size = new Size(353, 26);
             displayShadowPricesToolStripMenuItem.Text = "Display Shadow Prices";
+            displayShadowPricesToolStripMenuItem.Click += displayShadowPricesToolStripMenuItem_Click;
             // 
             // dualityAnalysisToolStripMenuItem
             // 
             dualityAnalysisToolStripMenuItem.Name = "dualityAnalysisToolStripMenuItem";
             dualityAnalysisToolStripMenuItem.Size = new Size(353, 26);
             dualityAnalysisToolStripMenuItem.Text = "Duality Analysis";
+            dualityAnalysisToolStripMenuItem.Click += dualityAnalysisToolStripMenuItem_Click;
             // 
             // splitContainer1
             // 
@@ -365,7 +377,7 @@
             // 
             // tabSens
             // 
-            tabSens.Controls.Add(richTextBox4);
+            tabSens.Controls.Add(sensitivityPanel);
             tabSens.Location = new Point(4, 29);
             tabSens.Name = "tabSens";
             tabSens.Size = new Size(636, 690);
@@ -373,17 +385,14 @@
             tabSens.Text = "Sensitivity Analysis";
             tabSens.UseVisualStyleBackColor = true;
             // 
-            // richTextBox4
+            // sensitivityPanel
             // 
-            richTextBox4.BackColor = Color.LightGray;
-            richTextBox4.BorderStyle = BorderStyle.FixedSingle;
-            richTextBox4.Dock = DockStyle.Fill;
-            richTextBox4.Location = new Point(0, 0);
-            richTextBox4.Name = "richTextBox4";
-            richTextBox4.ReadOnly = true;
-            richTextBox4.Size = new Size(636, 690);
-            richTextBox4.TabIndex = 0;
-            richTextBox4.Text = "";
+            sensitivityPanel.AutoScroll = true;
+            sensitivityPanel.Dock = DockStyle.Fill;
+            sensitivityPanel.Location = new Point(0, 0);
+            sensitivityPanel.Name = "sensitivityPanel";
+            sensitivityPanel.Size = new Size(636, 690);
+            sensitivityPanel.TabIndex = 0;
             // 
             // Form1
             // 
@@ -448,7 +457,7 @@
         private RichTextBox richTextBoxTableau;
         private RichTextBox richTextBoxOptimal;
         private TabPage tabSens;
-        private RichTextBox richTextBox4;
         private ToolStripMenuItem knapsackToolStripMenuItem;
+        private FlowLayoutPanel sensitivityPanel;
     }
 }
