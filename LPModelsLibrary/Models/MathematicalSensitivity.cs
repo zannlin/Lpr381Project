@@ -153,8 +153,7 @@ namespace LPModelsLibrary.Models
             }
             return rhsColumn;
         }
-        
-
+            
         public string Range_Of_NonBasic_Variable(int columnIndex)
         {
 
@@ -504,26 +503,143 @@ namespace LPModelsLibrary.Models
             return (bOptimal,optimalValue);
         }
 
-        private void add_column(double[] newColumn, string columnName, double newCoefficient)
+        public TableauTemplate AddRow(double[] newConstraintRow, string newConstraintName)
         {
-            // Need to talk to reggie about this one
-        }
+            int m = optimalTab.Tableau.GetLength(0); // current rows
+            int n = optimalTab.Tableau.GetLength(1); // current cols (includes RHS)
 
-        private void add_row(double[] newRow, string rowName, double newRHS)
-        {
-            // should return the new optimal solution after adding a new constraint to the model
-            double[,] newTable = new double[optimalTab.Tableau.GetLength(0) + 1, optimalTab.Tableau.GetLength(1) + 1];
-            for(int i =0;i< optimalTab.Tableau.GetLength(0);i++)
+            // new tableau: one more row, one more column (new slack)
+            double[,] newTableau = new double[m + 1, n + 1];
+
+            // copy old values into newTableau
+            for (int i = 0; i < m; i++)
+                for (int j = 0; j < n - 1; j++) // copy all cols except RHS
+                    newTableau[i, j] = optimalTab.Tableau[i, j];
+
+            // copy RHS column into the last column of newTableau
+            for (int i = 0; i < m; i++)
+                newTableau[i, n] = optimalTab.Tableau[i, n - 1];
+
+            // fill new row coefficients (decision vars part)
+            for (int j = 0; j < newConstraintRow.Length - 1; j++)
+                newTableau[m, j] = newConstraintRow[j];
+
+            // add RHS for the new constraint at the last column
+            newTableau[m, n] = newConstraintRow[^1];
+
+            // add slack column at index n-1 (just before RHS)
+            for (int i = 0; i < m; i++)
+                newTableau[i, n - 1] = 0;
+            newTableau[m, n - 1] = 1;
+
+            // maintain basic variables (row ops to keep tableau valid)
+            for (int j = 0; j < n - 1; j++)
             {
-                for(int j =0;j< optimalTab.Tableau.GetLength(1);j++)
+                if (Math.Abs(newTableau[m, j]) > 1e-9)
                 {
-                    newTable[i, j] = optimalTab.Tableau[i, j];
+                    int basicRow = -1;
+                    int ones = 0;
+                    for (int i = 1; i < m; i++)
+                    {
+                        if (Math.Abs(newTableau[i, j] - 1) < 1e-9)
+                        {
+                            basicRow = i;
+                            ones++;
+                        }
+                        else if (Math.Abs(newTableau[i, j]) > 1e-9)
+                        {
+                            ones = -99;
+                            break;
+                        }
+                    }
+
+                    if (ones == 1 && basicRow != -1)
+                    {
+                        double factor = newTableau[m, j];
+                        for (int k = 0; k < n + 1; k++)
+                            newTableau[m, k] -= factor * newTableau[basicRow, k];
+                    }
                 }
-                // need to talk to reggie
             }
 
+            // ensure RHS is non-negative
+           
+                for (int j = 0; j < n + 1; j++)
+                    newTableau[m, j] *= -1;
+            
 
+            // update headers: keep old headers but insert slack before RHS
+            string[] newRowHeaders = optimalTab.RowHeaders.Concat(new[] { newConstraintName }).ToArray();
+            string[] newColHeaders = optimalTab.ColHeaders
+                .Take(n - 1) // old cols except RHS
+                .Concat(new[] { $"s{m}" }) // new slack
+                .Concat(new[] { "RHS" })   // RHS stays last
+                .ToArray();
 
+            TableauTemplate updated = new TableauTemplate(
+                newTableau,
+                newColHeaders,
+                newRowHeaders,
+                0, null, null, null
+            );
+
+            Console.WriteLine(updated.ToString());
+            TableauTemplate result = DualSimplex(updated);
+            SimplexResult result1 = SolveFromTableau(result.Tableau, result.ColHeaders, result.RowHeaders);
+            foreach (var tab in result1.Tableaus)
+            {
+                Console.WriteLine(tab.ToString());
+            }
+            return result1.Tableaus.Last();
+        }
+
+        public TableauTemplate AddColumn(double[] fullColumn, string newColumnName)
+        {
+            int m = optimalTab.Tableau.GetLength(0); 
+            int n = optimalTab.Tableau.GetLength(1); 
+
+            if (fullColumn.Length != m)
+                throw new ArgumentException("Column length must match tableau row count.");
+
+            
+            double[,] newTableau = new double[m, n + 1];
+
+            
+            for (int i = 0; i < m; i++)
+                for (int j = 0; j < n; j++)
+                    newTableau[i, j] = originalTab.Tableau[i, j];
+
+            
+            for (int i = 0; i < m; i++)
+                newTableau[i, n] = newTableau[i, n - 1];
+
+            
+            for (int i = 0; i < m; i++)
+            {
+                if (i == 0)
+                    newTableau[i, n - 1] = -fullColumn[0]; 
+                else
+                    newTableau[i, n - 1] = fullColumn[i];  
+            }
+
+            // Update column headers
+            string[] newColHeaders = originalTab.ColHeaders
+                .Take(n - 1)                     
+                .Concat(new[] { newColumnName }) 
+                .Concat(new[] { "RHS" })         
+                .ToArray();
+
+            TableauTemplate updated = new TableauTemplate(
+                newTableau,
+                newColHeaders,
+                originalTab.RowHeaders.ToArray(),
+                0, null, null, null
+            );
+
+            Console.WriteLine(updated.ToString());
+            updated = DualSimplex(updated);
+            Console.WriteLine(updated.ToString());
+            return updated;
         }
 
         public string display_shadow_Prices()
@@ -597,6 +713,7 @@ namespace LPModelsLibrary.Models
                     {
                         mostNeg = b;
                         pr = i;
+                        Console.WriteLine($"Pivot row {pr}");
                     }
                 }
 
@@ -615,10 +732,11 @@ namespace LPModelsLibrary.Models
                         double zj = tab.Tableau[zRow, j];
                         double ratio = zj / (-a);
                         dualRatios[j] = ratio;
-                        if (ratio < bestRatio - 1e-15)
+                        if (ratio < bestRatio - 1e-15 && ratio != 0)
                         {
                             bestRatio = ratio;
                             pc = j;
+                            Console.WriteLine($"Best ratio {bestRatio} and pivot columne {pc}");
                         }
                     }
                 }
@@ -674,9 +792,7 @@ namespace LPModelsLibrary.Models
             return T;
         }
 
-
-
-    public double GoldenSectionSearch(string expression, double xlo, double xhi, double tolerance = 1e-6)
+        public double GoldenSectionSearch(string expression, double xlo, double xhi, double tolerance = 1e-6)
     {
         const double GoldenRatio = 0.6180339887498949; // (3 - sqrt(5)) / 2
 
@@ -726,10 +842,161 @@ namespace LPModelsLibrary.Models
         }
     }
 
+        public  static SimplexResult SolveFromTableau(double[,] tableau, string[] colHeaders, string[] rowHeaders,bool isMaximization = true, double eps = 1e-9)
+        {
+            // Clone the input tableau to avoid modifying the original
+            int rows = tableau.GetLength(0);
+            int cols = tableau.GetLength(1);
+            double[,] T = (double[,])tableau.Clone();
+            //print table 
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    Console.Write($"{T[i, j],8:F2} ");
+                }
+                Console.WriteLine();
+            }
+            string[] colHeadersCopy = (string[])colHeaders.Clone();
+            string[] rowHeadersCopy = (string[])rowHeaders.Clone();
+
+            // Validate RHS for feasibility (check constraint rows, skip objective row)
+            for (int i = 1; i < rows; i++)
+            {
+                if (T[i, cols - 1] < -eps)
+                {
+                    return new SimplexResult
+                    {
+                        IsInfeasible = true,
+                        Message = "Infeasible: RHS contains negative values. Phase I required."
+                    };
+                }
+            }
+
+            var result = new SimplexResult();
+            int iteration = 0;
+            string problemType = isMaximization ? "MAX" : "MIN";
+            result.Tableaus.Add(new TableauTemplate(T, colHeadersCopy, rowHeadersCopy, iteration, null, null, $"Initial tableau ({problemType})"));
+
+            while (true)
+            {
+                iteration++;
+
+                int pivotColumn = -1;
+                double bestValue = isMaximization ? 0 : eps; // For MAX: look for most negative, for MIN: look for most positive
+
+                for (int j = 0; j < cols - 1; j++)
+                {
+                    if (isMaximization)
+                    {
+                        // Maximization: enter variable with most negative coefficient
+                        if (T[0, j] < bestValue)
+                        {
+                            bestValue = T[0, j];
+                            pivotColumn = j;
+                        }
+                    }
+                    else
+                    {
+                        // Minimization: enter variable with most positive coefficient
+                        if (T[0, j] > bestValue)
+                        {
+                            bestValue = T[0, j];
+                            pivotColumn = j;
+                        }
+                    }
+                }
+
+                // Check optimality condition
+                bool isOptimal = (pivotColumn == -1);
+                if (isOptimal)
+                {
+                    // Extract solution - count decision variables from headers
+                    int numDecisionVars = 0;
+                    for (int j = 0; j < cols - 1; j++)
+                    {
+                        if (colHeaders[j].StartsWith("x", StringComparison.OrdinalIgnoreCase))
+                            numDecisionVars++;
+                    }
+
+                    var x = new double[numDecisionVars];
+
+                    for (int i = 1; i < rows; i++)
+                    {
+                        // Find which variable is basic in this row (has coefficient 1 and others 0)
+                        for (int j = 0; j < cols - 1; j++)
+                        {
+                            bool isBasicInThisRow = Math.Abs(T[i, j] - 1.0) < eps;
+                            if (isBasicInThisRow)
+                            {
+                                // Check if this column has zeros elsewhere
+                                bool isBasicVariable = true;
+                                for (int k = 0; k < rows; k++)
+                                {
+                                    if (k != i && Math.Abs(T[k, j]) > eps)
+                                    {
+                                        isBasicVariable = false;
+                                        break;
+                                    }
+                                }
+                                if (isBasicVariable && colHeaders[j].StartsWith("x", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // Extract variable index from header (e.g., "x1" -> index 0)
+                                    if (int.TryParse(colHeaders[j].Substring(1), out int varIndex) && varIndex <= numDecisionVars)
+                                    {
+                                        x[varIndex - 1] = T[i, cols - 1];
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    double objectiveValue = isMaximization ? T[0, cols - 1] : -T[0, cols - 1];
+
+                    result.OptimalValue = objectiveValue;
+                    result.PrimalVariables = x;
+                    result.Message = $"Optimal solution found ({problemType}).";
+                    result.Tableaus.Add(new TableauTemplate(T, colHeadersCopy, rowHeadersCopy, iteration, null, null, $"Optimal tableau ({problemType})"));
+                    break;
+                }
+
+                // Find leaving variable (minimum ratio test)
+                int pivotRow = -1;
+                double bestRatio = double.PositiveInfinity;
+                for (int i = 1; i < rows; i++)
+                {
+                    double aij = T[i, pivotColumn];
+                    if (aij > eps)
+                    {
+                        double ratio = T[i, cols - 1] / aij;
+                        if (ratio < bestRatio - 1e-15 || (Math.Abs(ratio - bestRatio) <= 1e-15 && i < pivotRow))
+                        {
+                            bestRatio = ratio;
+                            pivotRow = i;
+                        }
+                    }
+                }
+
+                if (pivotRow == -1)
+                {
+                    result.IsUnbounded = true;
+                    result.Message = $"Unbounded: no leaving variable found ({problemType}).";
+                    result.Tableaus.Add(new TableauTemplate(T, colHeadersCopy, rowHeadersCopy, iteration, null, pivotColumn, $"Unbounded ({problemType})"));
+                    break;
+                }
+
+                // Perform pivot operation
+                Pivot(T, pivotRow, pivotColumn, eps);
+
+                // Record this iteration
+                result.Tableaus.Add(new TableauTemplate(T, colHeadersCopy, rowHeadersCopy, iteration, pivotRow, pivotColumn, $"Iteration {iteration} ({problemType})"));
+            }
+
+            return result;
+        }
 
 
 
 
-
-}
+    }
 }

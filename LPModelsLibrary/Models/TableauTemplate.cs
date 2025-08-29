@@ -34,7 +34,7 @@
             widths[0] = Math.Max(5, RowHeaders.Max(h => h.Length));
             for (int j = 0; j < n; j++)
             {
-                int maxW = ColHeaders[j].Length;
+                    int maxW = ColHeaders[j].Length;
                 for (int i = 0; i < m; i++)
                     maxW = Math.Max(maxW, Tableau[i, j].ToString("0.###").Length);
                 widths[j + 1] = Math.Max(6, maxW);

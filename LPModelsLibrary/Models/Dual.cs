@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPModelsLibrary.Models
 {
-    public class Dual
+    public class Duality
     {
 
 
@@ -72,7 +72,9 @@ namespace LPModelsLibrary.Models
             double[] dualB = new double[n];      // RHS of dual
             double[] dualC = new double[m];      // objective of dual
 
-            
+            for (int i = 0; i < m; i++)
+                Console.WriteLine(b[i]);
+
             for (int i = 0; i < m; i++)
                 dualC[i] = -1*b[i];
 
@@ -80,7 +82,10 @@ namespace LPModelsLibrary.Models
             for (int j = 0; j < n; j++)
                 dualB[j] = -1*c[j];
 
-            
+            //print b
+            for(int i=0;i<n;i++)
+                Console.WriteLine(dualB[i]);
+
             for (int i = 0; i < n; i++)
             {
                 for (int j = 0; j < m; j++)
@@ -104,8 +109,10 @@ namespace LPModelsLibrary.Models
 
                 tableau[i + 1, m + i] = 1;                 
             }
+            for (int i = 0; i < n; i++)
+                tableau[i + 1, cols - 1] = dualB[i];
 
-            
+
             string[] colHeaders = new string[m + n + 1];
             for (int j = 0; j < m; j++)
                 colHeaders[j] = "y" + (j + 1);
@@ -118,6 +125,10 @@ namespace LPModelsLibrary.Models
             rowHeaders[0] = "Z";
             for (int i = 0; i < n; i++)
                 rowHeaders[i + 1] = "Constraint " + (i + 1);
+
+            // change the sign of objective function row
+            for (int j = 0; j < cols; j++)
+                tableau[0, j] = -1 * tableau[0, j];
 
             return new TableauTemplate
             (
