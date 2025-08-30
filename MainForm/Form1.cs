@@ -389,13 +389,77 @@ namespace MainForm
                     break;
 
                 case "Add New Activity":
-                    // Placeholder (implement when add_column is ready)
-                    sensitivityPanel.Controls.Add(new Label { Text = "Add New Activity: Not implemented yet.", AutoSize = true, Margin = new Padding(5) });
+                    Label activityLabel = new Label { Text = "Enter New Activity (e.g., 20 0 0 1 for 4 rows):", AutoSize = true, Margin = new Padding(5) };
+                    TextBox activityInput = new TextBox { Name = "txtActivityInput", Margin = new Padding(5), Width = 300, Multiline = true, Height = 50 };
+                    Label activityNameLabel = new Label { Text = "New Activity Name (e.g., x5):", AutoSize = true, Margin = new Padding(5) };
+                    TextBox activityName = new TextBox { Name = "txtActivityName", Margin = new Padding(5), Width = 100 };
+                    Button activityButton = new Button { Text = "Add Activity", Margin = new Padding(5) };
+                    activityButton.Click += (s, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(activityInput.Text) && !string.IsNullOrWhiteSpace(activityName.Text))
+                        {
+                            string[] parts = activityInput.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                                .Select(p => p.TrimStart('+'))
+                                .ToArray();
+                            int expectedRows = optimalTableau.Tableau.GetLength(0);
+                            if (parts.Length != expectedRows)
+                            {
+                                sensitivityPanel.Controls.Add(new Label { Text = $"Invalid input length. Expected {expectedRows} values to match the tableau row count.", AutoSize = true, Margin = new Padding(5) });
+                                return;
+                            }
+
+                            try
+                            {
+                                double[] fullColumn = parts.Select(p => double.Parse(p)).ToArray();
+                                TableauTemplate newTableau = sensitivity.AddColumn(fullColumn, activityName.Text);
+                                sensitivityPanel.Controls.Add(new Label { Text = "Optimal Tableau After Adding Activity: " + newTableau.ToString(), AutoSize = true, Margin = new Padding(5) });
+                            }
+                            catch (ArgumentException ex)
+                            {
+                                sensitivityPanel.Controls.Add(new Label { Text = $"Error: {ex.Message}", AutoSize = true, Margin = new Padding(5) });
+                            }
+                            catch (FormatException)
+                            {
+                                sensitivityPanel.Controls.Add(new Label { Text = "Error: Invalid number format. Use numeric values only.", AutoSize = true, Margin = new Padding(5) });
+                            }
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(activityLabel);
+                    sensitivityPanel.Controls.Add(activityInput);
+                    sensitivityPanel.Controls.Add(activityNameLabel);
+                    sensitivityPanel.Controls.Add(activityName);
+                    sensitivityPanel.Controls.Add(activityButton);
                     break;
 
                 case "Add New Constraint":
-                    // Placeholder (implement when add_row is ready)
-                    sensitivityPanel.Controls.Add(new Label { Text = "Add New Constraint: Not implemented yet.", AutoSize = true, Margin = new Padding(5) });
+                    Label constraintLabel = new Label { Text = "Enter New Constraint (e.g., 1 0 0 0 0 1 32):", AutoSize = true, Margin = new Padding(5) };
+                    TextBox constraintInput = new TextBox { Name = "txtConstraintInput", Margin = new Padding(5), Width = 300, Multiline = true, Height = 50 };
+                    Label constraintNameLabel = new Label { Text = "New Constraint Name (e.g., 4):", AutoSize = true, Margin = new Padding(5) };
+                    TextBox constraintName = new TextBox { Name = "txtConstraintName", Margin = new Padding(5), Width = 100 };
+                    Button constraintButton = new Button { Text = "Add Constraint", Margin = new Padding(5) };
+                    constraintButton.Click += (s, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(constraintInput.Text) && !string.IsNullOrWhiteSpace(constraintName.Text))
+                        {
+                            string[] parts = constraintInput.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                                .Select(p => p.TrimStart('+'))
+                                .ToArray();
+                            int numVars = optimalTableau.ColHeaders.Length - 2; // 6 variables (excluding slack and RHS)
+                            if (parts.Length != numVars + 1) // 6 coeffs + 1 RHS
+                                sensitivityPanel.Controls.Add(new Label { Text = $"Invalid input length. Expected {numVars + 1} values (6 coefficients + 1 RHS).", AutoSize = true, Margin = new Padding(5) });
+                            else
+                            {
+                                double[] newConstraintRow = parts.Select(p => double.Parse(p)).ToArray();
+                                TableauTemplate newTableau = sensitivity.AddRow(newConstraintRow, constraintName.Text);
+                                sensitivityPanel.Controls.Add(new Label { Text = "New Tableau Updated: " + newTableau.ToString(), AutoSize = true, Margin = new Padding(5) });
+                            }
+                        }
+                    };
+                    sensitivityPanel.Controls.Add(constraintLabel);
+                    sensitivityPanel.Controls.Add(constraintInput);
+                    sensitivityPanel.Controls.Add(constraintNameLabel);
+                    sensitivityPanel.Controls.Add(constraintName);
+                    sensitivityPanel.Controls.Add(constraintButton);
                     break;
 
                 case "Display Shadow Prices":
