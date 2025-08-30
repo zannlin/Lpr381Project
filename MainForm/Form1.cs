@@ -591,8 +591,12 @@ namespace MainForm
                 {
                     try
                     {
+                        // Combine content from all RichTextBox controls with labels
+                        string exportContent = $"--- Canonical ---\n{richTextBoxCanonical.Text}\n\n" +
+                                              $"--- Tableau ---\n{richTextBoxTableau.Text}\n\n" +
+                                              $"--- Optimal ---\n{richTextBoxOptimal.Text}\n";
 
-                        File.WriteAllText(sfd.FileName, richTextBoxOptimal.Text);
+                        File.WriteAllText(sfd.FileName, exportContent);
                         MessageBox.Show("File saved successfully!");
                     }
                     catch (Exception ex)
