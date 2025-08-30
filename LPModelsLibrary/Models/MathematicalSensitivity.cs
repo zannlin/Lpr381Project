@@ -792,57 +792,84 @@ namespace LPModelsLibrary.Models
             return T;
         }
 
-        public double GoldenSectionSearch(string expression, double xlo, double xhi, double tolerance = 1e-6)
-    {
-        const double GoldenRatio = 0.6180339887498949; // (3 - sqrt(5)) / 2
-
-        if (xlo >= xhi)
-            throw new ArgumentException("xlo must be less than xhi");
-
-        try
+        public string GoldenSectionSearch(string expression, double xlo, double xhi, double tolerance = 1e-6)
         {
-            double x1 = xhi - GoldenRatio * (xhi - xlo);
-            double x2 = xlo + GoldenRatio * (xhi - xlo);
+            double Phi = (Math.Sqrt(5) - 1) / 2.0; // ≈ 0.6180339887 (golden-ratio conjugate)
 
-            var expr1 = new Expression(expression);
-            expr1.Parameters["x"] = x1;
-            double f1 = Convert.ToDouble(expr1.Evaluate());
+            if (xlo >= xhi)
+                throw new ArgumentException("xlo must be less than xhi");
 
-            var expr2 = new Expression(expression);
-            expr2.Parameters["x"] = x2;
-            double f2 = Convert.ToDouble(expr2.Evaluate());
+            var rows = new List<double[]>();
+            int iteration = 1;
 
-            while ((xhi - xlo) > tolerance)
+            try
             {
-                if (f1 <= f2)
+                double x1 = xhi - Phi * (xhi - xlo);
+                double x2 = xlo + Phi * (xhi - xlo);
+
+                var expr1 = new Expression(expression);
+                expr1.Parameters["x"] = x1;
+                double f1 = Convert.ToDouble(expr1.Evaluate());
+
+                var expr2 = new Expression(expression);
+                expr2.Parameters["x"] = x2;
+                double f2 = Convert.ToDouble(expr2.Evaluate());
+
+                while ((xhi - xlo) > tolerance)
                 {
-                    xhi = x2;
-                    x2 = x1;
-                    f2 = f1;
-                    x1 = xhi - GoldenRatio * (xhi - xlo);
-                    expr1.Parameters["x"] = x1;
-                    f1 = Convert.ToDouble(expr1.Evaluate());
+                    // corrected "phi ratio" column: φ * (xhi - xlo)
+                    double phiSpan = Phi * (xhi - xlo);
+
+                    rows.Add(new double[] { iteration, xlo, xhi, phiSpan, x1, x2, f1, f2 });
+
+                    if (f1 <= f2)
+                    {
+                        xhi = x2;
+                        x2 = x1;
+                        f2 = f1;
+                        x1 = xhi - Phi * (xhi - xlo);
+                        expr1.Parameters["x"] = x1;
+                        f1 = Convert.ToDouble(expr1.Evaluate());
+                    }
+                    else
+                    {
+                        xlo = x1;
+                        x1 = x2;
+                        f1 = f2;
+                        x2 = xlo + Phi * (xhi - xlo);
+                        expr2.Parameters["x"] = x2;
+                        f2 = Convert.ToDouble(expr2.Evaluate());
+                    }
+
+                    iteration++;
                 }
-                else
+
+                // final solution at midpoint
+                double xOpt = (xlo + xhi) / 2.0;
+                var exprFinal = new Expression(expression);
+                exprFinal.Parameters["x"] = xOpt;
+                double fOpt = Convert.ToDouble(exprFinal.Evaluate());
+
+                // build a neat table string
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"{"iter",4} | {"xlo",10} | {"xhi",10} | {"phi·(xhi-xlo)",14} | {"x1",10} | {"x2",10} | {"f(x1)",10} | {"f(x2)",10}");
+                sb.AppendLine(new string('-', 98));
+
+                foreach (var row in rows)
                 {
-                    xlo = x1;
-                    x1 = x2;
-                    f1 = f2;
-                    x2 = xlo + GoldenRatio * (xhi - xlo);
-                    expr2.Parameters["x"] = x2;
-                    f2 = Convert.ToDouble(expr2.Evaluate());
+                    sb.AppendLine($"{row[0],4} | {row[1],10:F6} | {row[2],10:F6} | {row[3],14:F6} | {row[4],10:F6} | {row[5],10:F6} | {row[6],10:F6} | {row[7],10:F6}");
                 }
+
+                sb.AppendLine($"\nThe optimal solution is x = {xOpt:F6} at f(x) = {fOpt:F6}");
+                return sb.ToString();
             }
-
-            return (xlo + xhi) / 2;
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Invalid expression: {expression}. Error: {ex.Message}");
+            }
         }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"Invalid expression: {expression}. Error: {ex.Message}");
-        }
-    }
 
-        public  static SimplexResult SolveFromTableau(double[,] tableau, string[] colHeaders, string[] rowHeaders,bool isMaximization = true, double eps = 1e-9)
+        public static SimplexResult SolveFromTableau(double[,] tableau, string[] colHeaders, string[] rowHeaders,bool isMaximization = true, double eps = 1e-9)
         {
             // Clone the input tableau to avoid modifying the original
             int rows = tableau.GetLength(0);
