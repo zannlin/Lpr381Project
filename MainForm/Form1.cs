@@ -467,11 +467,35 @@ namespace MainForm
                     break;
 
                 case "Duality Analysis":
-                    // Placeholder (implement full DualSimplex display)
-                    sensitivityPanel.Controls.Add(new Label { Text = "Duality Analysis: Implementing Dual Simplex...", AutoSize = true, Margin = new Padding(5) });
+                    // Input data as provided
+                    string[] input = textBoxInput.Lines;
+
+                    LinearModel linearModel = new LinearModel(input);
+
+                    double[] c = linearModel.ObjectiveFuntion;
+                    double[,] A = linearModel.Constraints;
+                    double[] b = linearModel.RightHandSide;
+
+                    Duality duality = new Duality();
+                    TableauTemplate canonicalDual = duality.BuildDualTableau(c, A, b);
+                    TableauTemplate solvedDual = null;
+
+                    try
+                    {
+                        solvedDual = duality.SolveDualFromPrimal(c, A, b);
+                        sensitivityPanel.Controls.Add(new Label { Text = "Canonical Dual Tableau:\n" + canonicalDual.ToString(), AutoSize = true, Margin = new Padding(5) });
+                        sensitivityPanel.Controls.Add(new Label { Text = "Solved Dual Tableau:\n" + solvedDual.ToString(), AutoSize = true, Margin = new Padding(5) });
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        sensitivityPanel.Controls.Add(new Label { Text = $"Error: {ex.Message}\nNote: The primal LP may be infeasible due to integer constraints or tight bounds. Consider adjusting constraints.", AutoSize = true, Margin = new Padding(5) });
+                        sensitivityPanel.Controls.Add(new Label { Text = "Canonical Dual Tableau:\n" + canonicalDual.ToString(), AutoSize = true, Margin = new Padding(5) });
+                    }
+
                     break;
             }
         }
+
 
 
         //Don't use this event, it's broken 
@@ -882,6 +906,71 @@ namespace MainForm
             {
                 MessageBox.Show($"Error: {ex.Message}\nStack Trace: {ex.StackTrace}");
             }
+        }
+
+        private void textBoxInput_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void goldenSearchToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // Clear the optimal result box
+            richTextBoxOptimal.Clear();
+
+            // Validate inputs
+            if (string.IsNullOrWhiteSpace(txtFunct.Text) || string.IsNullOrWhiteSpace(txtLow.Text) || string.IsNullOrWhiteSpace(txtUpp.Text))
+            {
+                richTextBoxOptimal.AppendText("Error: All fields are required.\n");
+                return;
+            }
+
+            if (!double.TryParse(txtLow.Text, out double xlo) || !double.TryParse(txtUpp.Text, out double xhi))
+            {
+                richTextBoxOptimal.AppendText("Error: Invalid number format for bounds.\n");
+                return;
+            }
+
+            if (xlo >= xhi)
+            {
+                richTextBoxOptimal.AppendText("Error: xlo must be less than xhi.\n");
+                return;
+            }
+
+            // Add debugging information
+            richTextBoxOptimal.AppendText($"Debug: Expression: {txtFunct.Text}, xlo: {xlo}, xhi: {xhi}\n");
+
+            try
+            {
+                MathematicalSensitivity sensitivity = new MathematicalSensitivity(optimalTableau, originalTableau); // Assuming form-level variables
+                double result = sensitivity.GoldenSectionSearch(txtFunct.Text, xlo, xhi);
+                richTextBoxOptimal.AppendText($"Optimal Solution: Minimum occurs at x = {result:F6}\n");
+            }
+            catch (ArgumentException ex)
+            {
+                richTextBoxOptimal.AppendText($"Error: {ex.Message}\n");
+                richTextBoxOptimal.AppendText($"Debug: Full Error Details: {ex.ToString()}\n");
+            }
+        }
+
+        private void btnClearInput_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnClearAll_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void steepestAscentDescentToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
