@@ -39,6 +39,7 @@
             branchAndBoundToolStripMenuItem = new ToolStripMenuItem();
             knapsackToolStripMenuItem = new ToolStripMenuItem();
             goldenSearchToolStripMenuItem = new ToolStripMenuItem();
+            steepestAscentDescentToolStripMenuItem = new ToolStripMenuItem();
             sensitivityAnalysisToolStripMenuItem = new ToolStripMenuItem();
             rangeOfNonBasicVariablesToolStripMenuItem = new ToolStripMenuItem();
             changeNonBasicVariableToolStripMenuItem = new ToolStripMenuItem();
@@ -76,7 +77,6 @@
             richTextBoxOptimal = new RichTextBox();
             tabSens = new TabPage();
             sensitivityPanel = new FlowLayoutPanel();
-            steepestAscentDescentToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -191,6 +191,15 @@
             goldenSearchToolStripMenuItem.Size = new Size(256, 26);
             goldenSearchToolStripMenuItem.Text = "Golden Search";
             goldenSearchToolStripMenuItem.Click += goldenSearchToolStripMenuItem_Click;
+            // 
+            // steepestAscentDescentToolStripMenuItem
+            // 
+            steepestAscentDescentToolStripMenuItem.BackColor = Color.DarkSlateGray;
+            steepestAscentDescentToolStripMenuItem.ForeColor = SystemColors.Control;
+            steepestAscentDescentToolStripMenuItem.Name = "steepestAscentDescentToolStripMenuItem";
+            steepestAscentDescentToolStripMenuItem.Size = new Size(256, 26);
+            steepestAscentDescentToolStripMenuItem.Text = "Steepest Ascent/Descent";
+            steepestAscentDescentToolStripMenuItem.Click += steepestAscentDescentToolStripMenuItem_Click;
             // 
             // sensitivityAnalysisToolStripMenuItem
             // 
@@ -591,15 +600,6 @@
             sensitivityPanel.Name = "sensitivityPanel";
             sensitivityPanel.Size = new Size(634, 688);
             sensitivityPanel.TabIndex = 0;
-            // 
-            // steepestAscentDescentToolStripMenuItem
-            // 
-            steepestAscentDescentToolStripMenuItem.BackColor = Color.DarkSlateGray;
-            steepestAscentDescentToolStripMenuItem.ForeColor = SystemColors.Control;
-            steepestAscentDescentToolStripMenuItem.Name = "steepestAscentDescentToolStripMenuItem";
-            steepestAscentDescentToolStripMenuItem.Size = new Size(256, 26);
-            steepestAscentDescentToolStripMenuItem.Text = "Steepest Ascent/Descent";
-            steepestAscentDescentToolStripMenuItem.Click += steepestAscentDescentToolStripMenuItem_Click;
             // 
             // Form1
             // 

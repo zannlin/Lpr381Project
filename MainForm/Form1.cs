@@ -161,10 +161,10 @@ namespace MainForm
         {
             // 1. Canonical / Objective
             richTextBoxCanonical.Clear();
-            richTextBoxCanonical.AppendText("Branch and Bound Result\n");
+            richTextBoxCanonical.AppendText("Branch and Bound Objective Function\n");
             if (result.OptimalSolution != null)
             {
-                richTextBoxCanonical.AppendText("Optimal Solution:\n");
+                richTextBoxCanonical.AppendText("Objective Function:\n");
                 richTextBoxCanonical.AppendText(
                     string.Join(" ", result.OptimalSolution.Select((v, i) => $"x{i + 1}={v:0.###}"))
                 );
@@ -943,7 +943,7 @@ namespace MainForm
             try
             {
                 MathematicalSensitivity sensitivity = new MathematicalSensitivity(optimalTableau, originalTableau); // Assuming form-level variables
-                double result = sensitivity.GoldenSectionSearch(txtFunct.Text, xlo, xhi);
+                string result = sensitivity.GoldenSectionSearch(txtFunct.Text, xlo, xhi);
                 richTextBoxOptimal.AppendText($"Optimal Solution: Minimum occurs at x = {result:F6}\n");
             }
             catch (ArgumentException ex)
@@ -955,17 +955,28 @@ namespace MainForm
 
         private void btnClearInput_Click(object sender, EventArgs e)
         {
-
+            txtFunct.Clear();
+            txtLow.Clear();
+            txtUpp.Clear();
+            textBoxInput.Clear();
         }
 
         private void btnClearAll_Click(object sender, EventArgs e)
         {
-
+            txtFunct.Clear();
+            txtLow.Clear();
+            txtUpp.Clear();
+            textBoxInput.Clear();
+            richTextBoxOptimal.Clear();
+            richTextBoxCanonical.Clear();
+            richTextBoxCanonical.Clear();
+            richTextBoxTableau.Clear();
+            sensitivityPanel.Controls.Clear();
         }
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-
+            this.Close();
         }
 
         private void steepestAscentDescentToolStripMenuItem_Click(object sender, EventArgs e)
